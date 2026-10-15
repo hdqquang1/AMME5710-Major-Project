@@ -170,7 +170,7 @@ def scaled_views(views, s):
 
 def foreground_masks(rig, z_near, z_far, mask_scale=0.5, n_neighbours=6, win=5, keep=0.5,
                      step_px=2.0, z_split=None, dilate_px=2, verbose=False, max_offset=3,
-                     n_threads=4):
+                     n_threads=4, wall_front=None):
     """
     Colour-free occluder (foliage) masks for every view.
 
@@ -178,6 +178,10 @@ def foreground_masks(rig, z_near, z_far, mask_scale=0.5, n_neighbours=6, win=5, 
        cleaners remain several pixels wide).
     2. Robust plane sweep of every view against `n_neighbours` partners.
     3. Split depth = Otsu threshold of the reference depth map (unless given).
+       With `wall_front` (how far fruit can hang in front of the wall) the split
+       is never placed behind z_wall - wall_front - 10 mm, so fruit is never
+       masked and a capture without foliage (unimodal depth histogram) gives
+       empty masks instead of splitting the wall.
     4. Foreground = depth nearer than the split; a 3x3 opening removes speckle,
        then the mask is upsampled and dilated by `dilate_px` so defocused or
        fuzzy pipe-cleaner rims are also excluded.
@@ -201,6 +205,11 @@ def foreground_masks(rig, z_near, z_far, mask_scale=0.5, n_neighbours=6, win=5, 
     out_depths[rig.ref], planes = sweep_one(rig.ref)
     if z_split is None:
         z_split = otsu_split_depth(out_depths[rig.ref])
+        if wall_front is not None:
+            d_ref = out_depths[rig.ref]
+            far = d_ref[d_ref > z_split]
+            z_wall = float(np.median(far)) if far.size else float(np.median(d_ref))
+            z_split = min(z_split, z_wall - wall_front - 0.01)
     if verbose:
         print(f"    split depth (Otsu on inverse depth): {z_split:.3f} m")
     others = [i for i in range(len(small)) if i != rig.ref]
