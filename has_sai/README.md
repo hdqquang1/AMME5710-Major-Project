@@ -62,9 +62,59 @@ click-to-label tool that writes ground-truth fruit centres for `--labels`.
 
 Photos and generated scenes live in `data/` folders, which git ignores.
 
-## Results
+## Results so far (simulation only)
 
-See `results/synthetic/summary.md` once the benchmark has run.
+No real photos have been processed yet: the first capture is not in the repo
+(`data/` is git-ignored).  Everything below is from the synthetic benchmark:
+44 ray-cast scenes, test seeds 2 and 3 never looked at during development,
+detector frozen at tag `has-sai-freeze-1` before they were read.  Full tables:
+`results/synthetic/summary.md`, `factorial.md`, `realpath_study.csv`.
+
+**Leaf-free image (PSNR inside the fruit region, against the foliage-free photo)**
+
+| | cherry | grape | lime |
+|---|---|---|---|
+| centre photo | 19.9 dB | 19.8 dB | 18.1 dB |
+| prototype leaf-masked mean SAI | 17.9 | 15.2 | 15.4 |
+| median SAI | 25.0 | 23.6 | 22.3 |
+| occlusion-aware SAI (this branch) | **31.0** | **32.0** | **31.7** |
+
+**Counting F1 on the test scenes**
+
+| | cherry | grape | lime |
+|---|---|---|---|
+| prototype pipeline (masked mean SAI + colour detector) | 0.55 | 0.00 | 0.00 |
+| centre photo + prototype colour detector | 0.70 | 0.00 | 0.00 |
+| prototype SAI + colour mask split by distance transform | **0.997** | 0.00 | 0.00 |
+| median SAI + colour-free 2-D detector | 0.58 | 0.79 | 0.74 |
+| ours: occlusion-aware SAI + colour-free 3-D relief detector | 0.81 | 0.40 | 0.88 |
+| ours + random-forest verifier | 0.87 | 0.55 | 0.90 |
+| ours leaf-free image + colour-free 2-D detector | 0.62 | **0.84** | **0.91** |
+| foliage-free photo + colour-free 2-D detector (reference) | 0.75 | 0.87 | 0.93 |
+
+What this says, honestly:
+
+* The occlusion-aware render is the clear win: 6 to 9 dB above median synthetic
+  aperture on every fruit, and every colour-free detector scores higher on it
+  than on the photo or the median image.
+* For red cherries in simulation a simple colour mask split by its distance
+  transform, on any synthetic-aperture image, is close to perfect.  The simulator
+  has one clean cherry red and one leaf green, so it cannot show where colour
+  fails (dark-purple cherries, shadows, reddish stems, tan stakes); only real
+  photos can.
+* For green fruit, where colour gets nothing, the leaf-free image with the
+  colour-free 2-D detector is the best counter (grapes 0.84, limes 0.91).
+* The 3-D relief detector works for separate round fruit at up to 30 % cover
+  (cherries 0.99 at 10 %, 0.88 at 30 %) but drops to 0.54 at 50 % cover, fails on
+  packed grape bunches, and needs accurate poses: 0.1 degree of pose error drops
+  it to 0.12, and it needs at least 9 photos.
+* Through `run_real.py`'s exact path (rail SfM poses, frozen threshold) on new
+  scenes with rendered carriage wobble, drift and exposure jitter, it counted
+  cherries at F1 0.95 to 1.00 (10 and 30 % cover), and the foliage-free control
+  counted within one cherry.
+
+A five-seat review (`docs/council_verdict.md`) concluded: keep the geometric
+de-occlusion, test on real captures first, and claim only what survives.
 
 ## Layout
 

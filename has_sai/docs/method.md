@@ -171,12 +171,24 @@ display (Telea 2004).
 * Image: PSNR and SSIM inside the ROI against the foliage-free photo.
 * Masks: recall, precision, IoU against the true foliage; depth: median absolute
   error by surface class.
-* Scenes: cherries (10/30/50 % foliage, gap 0.15/0.34 m), green grapes and limes;
-  seed 0 calibrates, seed 1 tests.  Robustness: 3 to 13 photos, pose noise
-  0.1 to 0.5 degrees with 1 mm, focal length +/-3 %.
+* Scenes: cherries (10/30/50 % foliage, gap 0.15/0.34 m), green grapes and limes,
+  44 in all.  Seeds 0 and 1 calibrate thresholds and the verifier (and were used
+  while developing the method); seeds 2 and 3 are test scenes that were not
+  looked at until the detector was frozen (git tag `has-sai-freeze-1`).  Scenes
+  with the same seed share a fruit layout, so each fruit type has two test
+  layouts; per-layout results are reported.  Robustness: 3 to 13 photos, pose
+  noise 0.1 to 0.5 degrees with 1 mm, focal length +/-3 %.  The real-capture
+  path (`run_real.py`: rail SfM poses, optional exposure matching, frozen
+  threshold) is scored separately on scenes rendered with carriage rotation,
+  drift and exposure jitter.
 * Baselines: centre photo; the prototype colour pipeline as published and with
   its area cap calibrated; median synthetic aperture with the colour-free 2-D
-  detector; ablations of each stage; an oracle (foliage-free photo, true depth).
+  detector; ablations of each stage; an oracle reference (foliage-free photo,
+  true depth; not a strict upper bound because its threshold is calibrated
+  separately).  A factorial study crosses every image source (photo, prototype
+  SAI, median SAI, ours, foliage-free) with every detector (prototype colour,
+  colour + distance-transform split, colour-free 2-D) and adds per-view voting
+  rivals (detect then integrate), on the fruit region and on the whole frame.
 
 ## 10. Libraries
 
