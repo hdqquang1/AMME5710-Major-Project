@@ -33,6 +33,9 @@ import numpy as np
 import cv2
 
 
+PRIOR_WEIGHT = 1.0   # weight of the per-step rail prior (1 mm of step error ~ 1 px)
+
+
 class _UnionFind:
     def __init__(self):
         self.p = {}
@@ -120,75 +123,95 @@ def solve_centre_translation_only(K, X, uv):
     return C
 
 
-def global_translation_ls(K, tracks, feats, n, ref, spacing, X0, C0, n_iter=6, outlier_px=2.0):
+def global_known_rotation_ls(K, tracks, feats, n, ref, spacing, X0, Rs, ts0, n_iter=6, outlier_px=2.0,
+                             prior_weight=None):
     """
-    Global known-rotation (R = I) structure from motion by linear least squares.
+    Global structure from motion with KNOWN rotations, by linear least squares.
 
-    For camera i and point j the pixel (u, v) satisfies A_ij (X_j - C_i) = 0 with
+    For camera i (rotation R_i, translation t_i) and point j the pixel (u, v)
+    satisfies A_ij (R_i X_j + t_i) = 0 with
         A_ij = [[fx, 0, -(u - cx)], [0, fy, -(v - cy)]],
-    which is LINEAR in every unknown.  Each equation is weighted by 1 / depth
-    (from the previous iterate) so the algebraic residual approximates the pixel
-    error.  Points are eliminated with the Schur complement
-        N_j = sum_i M_ij,   M_ij = A_ij^T A_ij w_ij^2,
-        S C = 0 with S_ik = delta_ik sum_j M_ij - sum_j M_ij N_j^-1 M_kj,
-    and the camera system is solved with the gauge fixed (C_ref = 0) and the
-    scale fixed by the rail length along the current rail direction.
-    Observations with reprojection error above `outlier_px` are dropped and the
-    solve repeated.  Returns (C list, X dict track -> point, rmse).
+    which is LINEAR in every X_j and t_i.  Each equation is weighted by the
+    inverse depth from the previous iterate so the residual approximates
+    pixels.  With B_ij = A_ij R_i, points are eliminated by the Schur complement
+        N_j = sum_i B_ij^T B_ij,  X_j = -N_j^-1 sum_i B_ij^T A_ij t_i,
+        S_ii += A^T A,  S_ik -= (A_ij^T B_ij) N_j^-1 (A_kj^T B_kj)^T,
+    and the camera system is solved with the gauge fixed (t_ref = 0), the scale
+    fixed exactly by the end-to-end rail length, and a soft rail prior on every
+    consecutive step (see the comment in the solver); camera centres are
+    C_i = -R_i^T t_i.  Observations above `outlier_px` are pruned between
+    iterations.  Returns (t list, X dict track -> point, rmse).
     """
     fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
+    if prior_weight is None:
+        prior_weight = PRIOR_WEIGHT
     obs = {ti: dict(tr) for ti, tr in enumerate(tracks) if ti in X0}
-    C = np.array(C0, np.float64)
+    t = np.array(ts0, np.float64)
     X = {ti: np.array(x, np.float64) for ti, x in X0.items()}
     rmse = None
     for it in range(n_iter):
         S = np.zeros((3 * n, 3 * n))
-        Nj_inv, Mj = {}, {}
+        Ninv, Qs = {}, {}
         for ti, tr in obs.items():
             if len(tr) < 2:
                 continue
-            Ms = {}
             N = np.zeros((3, 3))
+            Q = {}
             for i, kp in tr.items():
                 u, v = feats[i][0][kp]
-                A = np.array([[fx, 0, -(u - cx)], [0, fy, -(v - cy)]])
-                z = max(X[ti][2] - C[i][2], 1e-3)
-                M = (A.T @ A) / (z * z)
-                Ms[i] = M
-                N += M
+                z = max((Rs[i] @ X[ti] + t[i])[2], 1e-3)
+                A = np.array([[fx, 0, -(u - cx)], [0, fy, -(v - cy)]]) / z
+                B = A @ Rs[i]
+                N += B.T @ B
+                Q[i] = A.T @ B
+                S[3 * i:3 * i + 3, 3 * i:3 * i + 3] += A.T @ A
             Ni = np.linalg.inv(N + 1e-12 * np.eye(3))
-            Nj_inv[ti], Mj[ti] = Ni, Ms
-            for i, Mi in Ms.items():
-                S[3 * i:3 * i + 3, 3 * i:3 * i + 3] += Mi
-                for k, Mk in Ms.items():
-                    S[3 * i:3 * i + 3, 3 * k:3 * k + 3] -= Mi @ Ni @ Mk
-        # constraints: C_ref = 0 and g . C = L (rail length along the current direction)
+            for i, Qi in Q.items():
+                for k, Qk in Q.items():
+                    S[3 * i:3 * i + 3, 3 * k:3 * k + 3] -= Qi @ Ni @ Qk.T
+            Ninv[ti], Qs[ti] = Ni, Q
+        # Rail prior: every consecutive step along the rail direction d should be
+        # `spacing`.  With centres C_i = -R_i^T t_i, the step (C_{i+1} - C_i).d is
+        # linear in t, so the prior adds lam * sum (g_i.t - spacing)^2.  It stops
+        # photos with few tracks collapsing onto the reference (the algebraic cost
+        # alone is minimised by putting cameras and points together).  lam converts
+        # 1 mm of step error to about 1 px at the wall depth.
+        C = np.array([-Rs[i].T @ t[i] for i in range(n)])
         d = C[-1] - C[0]
         d = d / max(np.linalg.norm(d), 1e-9)
-        g = np.zeros(3 * n)
-        g[3 * (n - 1):3 * n] = d
-        g[0:3] -= d
+        z_typ = float(np.median([X[ti][2] for ti in Qs])) if Qs else 1.0
+        lam = (fx / max(z_typ, 1e-3)) ** 2 * prior_weight
+        Q = S.copy()
+        b = np.zeros(3 * n)
+        for i in range(n - 1):
+            g = np.zeros(3 * n)
+            g[3 * (i + 1):3 * (i + 2)] = -Rs[i + 1] @ d
+            g[3 * i:3 * (i + 1)] += Rs[i] @ d
+            Q += lam * np.outer(g, g)
+            b += lam * spacing * g
+        # exact end-to-end rail length (fixes the scale without bias)
+        h = np.zeros(3 * n)
+        h[3 * (n - 1):3 * n] = -Rs[n - 1] @ d
+        h[0:3] += Rs[0] @ d
         free = [k for k in range(3 * n) if k // 3 != ref]
-        Sf = S[np.ix_(free, free)]
-        gf = g[free]
-        L = spacing * (n - 1)
-        KKT = np.zeros((len(free) + 1, len(free) + 1))
-        KKT[:-1, :-1] = 2 * Sf
-        KKT[:-1, -1] = gf
-        KKT[-1, :-1] = gf
-        rhs = np.zeros(len(free) + 1)
-        rhs[-1] = L
-        sol = np.linalg.lstsq(KKT, rhs, rcond=None)[0]
-        Cv = np.zeros(3 * n)
-        Cv[free] = sol[:-1]
-        C = Cv.reshape(n, 3)
-        # back-substitute points, then prune outlier observations
+        m = len(free)
+        Qf = 2 * Q[np.ix_(free, free)]
+        # scale the constraint row to the data block, or lstsq drops it as noise
+        kappa = float(np.sqrt(np.mean(np.abs(np.diag(Qf))))) or 1.0
+        KKT = np.zeros((m + 1, m + 1))
+        KKT[:m, :m] = Qf
+        KKT[:m, m] = kappa * h[free]
+        KKT[m, :m] = kappa * h[free]
+        rhs = np.concatenate([2 * b[free], [kappa * spacing * (n - 1)]])
+        sol = np.linalg.solve(KKT, rhs)[:m]
+        tv = np.zeros(3 * n)
+        tv[free] = sol
+        t = tv.reshape(n, 3)
         errs = []
-        for ti in list(Mj.keys()):
-            rhs_p = sum(Mj[ti][i] @ C[i] for i in Mj[ti])
-            X[ti] = Nj_inv[ti] @ rhs_p
+        for ti in list(Qs.keys()):
+            X[ti] = -Ninv[ti] @ sum(Qs[ti][i].T @ t[i] for i in Qs[ti])
             for i, kp in list(obs[ti].items()):
-                xc = X[ti] - C[i]
+                xc = Rs[i] @ X[ti] + t[i]
                 if xc[2] <= 1e-3:
                     e = 1e9
                 else:
@@ -199,11 +222,48 @@ def global_translation_ls(K, tracks, feats, n, ref, spacing, X0, C0, n_iter=6, o
                     del obs[ti][i]
         rmse = float(np.sqrt(np.mean(np.square(errs)))) if errs else None
     X = {ti: X[ti] for ti in obs if len(obs[ti]) >= 2}
-    return [C[i] for i in range(n)], X, rmse
+    return [t[i] for i in range(n)], X, rmse
+
+
+def global_translation_ls(K, tracks, feats, n, ref, spacing, X0, C0, n_iter=6, outlier_px=2.0):
+    """Known-rotation solve with every R_i = I (rail prior); returns (C list, X, rmse)."""
+    Rs = [np.eye(3) for _ in range(n)]
+    ts, X, rmse = global_known_rotation_ls(K, tracks, feats, n, ref, spacing, X0, Rs,
+                                           [-np.asarray(c) for c in C0], n_iter, outlier_px)
+    return [-t_ for t_ in ts], X, rmse
+
+
+def refine_rotations(K, tracks, feats, n, ref, spacing, X, Rs, ts, n_outer=4):
+    """
+    Alternate per-camera PnP (rotation and translation, points fixed) with the
+    global known-rotation solve (translations and points, rotations fixed).
+    The global step prevents the drift of purely sequential refinement.
+    """
+    Rs = [R.copy() for R in Rs]
+    ts = [t_.copy() for t_ in ts]
+    rmse = None
+    for _ in range(n_outer):
+        for i in range(n):
+            if i == ref:
+                continue
+            obj, img = [], []
+            for ti, P in X.items():
+                if i in tracks[ti]:
+                    obj.append(P)
+                    img.append(feats[i][0][tracks[ti][i]])
+            if len(obj) < 12:
+                continue
+            rvec = cv2.Rodrigues(Rs[i])[0]
+            ok, rvec, tvec = cv2.solvePnP(np.array(obj), np.array(img), K, None, rvec,
+                                          ts[i].reshape(3, 1).copy(), True, cv2.SOLVEPNP_ITERATIVE)
+            if ok:
+                Rs[i] = cv2.Rodrigues(rvec)[0]
+        ts, X, rmse = global_known_rotation_ls(K, tracks, feats, n, ref, spacing, X, Rs, ts, n_iter=4)
+    return Rs, ts, X, rmse
 
 
 def estimate_rail_poses(gray_images, K, spacing, ref=None, max_pair_gap=None, n_iter=5, verbose=True,
-                        model="translation"):
+                        model="auto"):
     """
     Poses (R_i, t_i, world = reference camera frame) of a rail capture.
 
@@ -211,8 +271,10 @@ def estimate_rail_poses(gray_images, K, spacing, ref=None, max_pair_gap=None, n_
              spacing (rail step, metres), ref (reference index, default centre),
              model "translation" (rail prior: a rigid carriage does not rotate, so
              every R_i = I and only the centres are estimated; removes the
-             rotation-translation ambiguity of a short lateral baseline) or
-             "full" (independent rotation per photo).
+             rotation-translation ambiguity of a short lateral baseline),
+             "auto" (default: also fit per-photo rotations by alternating PnP with
+             the global known-rotation solve, and keep them only if they cut the
+             reprojection RMSE by more than 20 %) or "full" (sequential PnP only).
     Output:  dict(R=[...], t=[...], points (M x 3), diagnostics).
     """
     n = len(gray_images)
@@ -346,13 +408,23 @@ def estimate_rail_poses(gray_images, K, spacing, ref=None, max_pair_gap=None, n_
         ts = [t_ * s for t_ in ts]
         for ti in pts3:
             pts3[ti] = pts3[ti] * s
-    if model == "translation":
+    if model in ("translation", "auto"):
         retriangulate()
-        Cs, pts_new, rmse = global_translation_ls(K, tracks, feats, n, ref, spacing, pts3,
-                                                  [-t_ for t_ in ts])
+        Cs, pts_new, rmse_t = global_translation_ls(K, tracks, feats, n, ref, spacing, pts3,
+                                                    [-t_ for t_ in ts])
         ts = [-C for C in Cs]
         pts3.clear()
         pts3.update(pts_new)
+        chosen = "translation"
+        rmse_r = None
+        if model == "auto":
+            # does letting each photo rotate explain the tracks clearly better?
+            Rr, tr_, Xr, rmse_r = refine_rotations(K, tracks, feats, n, ref, spacing, dict(pts3), Rs, ts)
+            if rmse_r is not None and rmse_t is not None and rmse_r < 0.8 * rmse_t and rmse_t > 0.4:
+                Rs, ts, chosen = Rr, tr_, "rotation"
+                pts3.clear()
+                pts3.update(Xr)
+        model_info = dict(model_chosen=chosen, rmse_translation_only=rmse_t, rmse_with_rotation=rmse_r)
     retriangulate()
     # diagnostics
     errs = []
@@ -367,8 +439,14 @@ def estimate_rail_poses(gray_images, K, spacing, ref=None, max_pair_gap=None, n_
     steps = np.linalg.norm(np.diff(C, axis=0), axis=1)
     rot_deg = [float(np.degrees(np.arccos(np.clip((np.trace(R) - 1) / 2, -1, 1)))) for R in Rs]
     diag = dict(n_points=len(pts3), reproj_rmse_px=float(np.sqrt(np.mean(np.square(errs)))) if errs else None,
+                **(model_info if model in ("translation", "auto") else dict(model_chosen="full")),
                 path_straightness_mm=float(np.sqrt(np.mean(np.sum(off_line ** 2, 1))) * 1e3),
                 spacing_mm=(steps * 1e3).round(2).tolist(), rotation_deg=np.round(rot_deg, 3).tolist())
+    # stage gate: every consecutive step should be close to the rail spacing
+    bad = [k for k, st in enumerate(steps) if not (0.7 * spacing <= st <= 1.3 * spacing)]
+    diag["spacing_gate_failed_steps"] = bad
+    if bad:
+        print(f"    WARNING rail SfM: steps {bad} are outside 70-130 % of the {spacing*1e3:.0f} mm spacing")
     if verbose:
         print(f"    rail SfM: {len(pts3)} points, reprojection RMSE {diag['reproj_rmse_px']:.2f} px, "
               f"path deviation from a line {diag['path_straightness_mm']:.2f} mm")
