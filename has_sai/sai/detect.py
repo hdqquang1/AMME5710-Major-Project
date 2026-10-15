@@ -48,6 +48,10 @@ import cv2
 
 
 FRUIT_RADII = {"cherry": (0.0085, 0.0125), "grape": (0.0065, 0.0095), "lime": (0.022, 0.031)}
+# Length of the relief line element in units of R_max: cherries hang in rows of up
+# to four (about 8 R), so the line must span a whole row; grape berries are judged
+# against their own bunch, so a short element (4 R) keeps each berry's dome.
+RELIEF_FACTOR = {"cherry": 10.0, "grape": 4.0, "lime": 4.0}
 
 
 def line_kernel(length, angle_deg):
@@ -145,7 +149,8 @@ def disc_stats(img, x, y, r_in, r_out=None):
 
 def detect_fruit(depth, image, support, K, fruit="cherry", radius_range=None, confidence=None,
                  cost=None, min_support=3.0, min_conf=0.15, h_min_frac=0.4, k_noise=4.0,
-                 relief_len_factor=10.0, n_scales=4, relief_scale=1.0, use_appearance=True):
+                 relief_len_factor=None, n_scales=4, relief_scale=1.0, use_appearance=True,
+                 wall_front=0.07):
     """
     Colour-free fruit detection on the leaf-free reconstruction of the reference view.
 
@@ -163,12 +168,15 @@ def detect_fruit(depth, image, support, K, fruit="cherry", radius_range=None, co
                     the relief map (1.4826 x median absolute deviation)
     Untrusted depths are inpainted from their neighbours, then median filtered
     (5x5), before the relief is computed.  Candidates whose relief exceeds
-    2 R_max + 30 mm (more than a fruit can protrude) are rejected.
+    wall_front + 10 mm (the background sweep never searches nearer than
+    wall_front in front of the wall, so larger reliefs are artefacts) are rejected.
     Returns (candidates, maps): candidates is a list of dicts with pixel
     position, metric radius, 3-D centre, features and score; maps holds the
     relief and response images for display.
     """
     R_min, R_max = radius_range if radius_range else FRUIT_RADII[fruit]
+    if relief_len_factor is None:
+        relief_len_factor = RELIEF_FACTOR.get(fruit, 10.0)
     f = K[0, 0]
     valid = support >= min_support
     if confidence is not None:
@@ -181,7 +189,7 @@ def detect_fruit(depth, image, support, K, fruit="cherry", radius_range=None, co
     rv = relief[valid] if np.any(valid) else relief.ravel()
     noise = 1.4826 * float(np.median(np.abs(rv - np.median(rv))))
     h_min = max(h_min_frac * R_min, k_noise * noise)
-    h_max = 2.0 * R_max + 0.03
+    h_max = wall_front + 0.01
 
     # scale-normalised LoG of the relief over the plausible pixel radii
     radii = np.geomspace(f * R_min / z_med, f * R_max / z_med, n_scales)
