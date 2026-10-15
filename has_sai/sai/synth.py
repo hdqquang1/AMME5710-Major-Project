@@ -64,6 +64,7 @@ DEFAULTS = dict(
     pose_trans_m=0.0,            # 1-sigma translation jitter per view [m]
     y_drift_m=0.0,               # linear vertical drift end to end [m] (rail not level)
     noise_sigma=1.5,             # sensor noise [8-bit grey levels]
+    exposure_jitter=0.0,         # 1-sigma per-photo exposure gain change (0 = locked exposure)
     psf_sigma=0.45,              # lens blur [output px]
     supersample=2,
     seed=0,
@@ -528,11 +529,11 @@ class Renderer:
         self.commit(box, np.where(hit, t, np.inf).astype(np.float32), col, oid)
 
     # -- output -----------------------------------------------------------
-    def finish(self, psf_sigma, noise_sigma, rng):
-        """Downsample, blur, add noise; return (uint8 BGR, depth, id map)."""
+    def finish(self, psf_sigma, noise_sigma, rng, gain=1.0):
+        """Downsample, blur, apply exposure gain, add noise; return (uint8 BGR, depth, id map)."""
         ss = self.ss
         W, H = self.W // ss, self.H // ss
-        rgb = cv2.resize(self.rgb, (W, H), interpolation=cv2.INTER_AREA)
+        rgb = cv2.resize(self.rgb, (W, H), interpolation=cv2.INTER_AREA) * gain
         if psf_sigma > 0:
             rgb = cv2.GaussianBlur(rgb, (0, 0), psf_sigma)
         rgb = rgb + rng.normal(0, noise_sigma / 255.0, rgb.shape).astype(np.float32)
@@ -547,7 +548,7 @@ class Renderer:
 # ---------------------------------------------------------------------------
 # Scene assembly
 # ---------------------------------------------------------------------------
-def render_view(p, K, cam, statics, fruit, stems, foliage, rng):
+def render_view(p, K, cam, statics, fruit, stems, foliage, rng, gain=1.0):
     """
     Render one view twice: without foliage, then with foliage composited on top.
 
@@ -570,9 +571,9 @@ def render_view(p, K, cam, statics, fruit, stems, foliage, rng):
         r.add_tube(p0, p1, tr, col, ID_FOLIAGE, fuzz=0.18, rng=rng)
     for lf in foliage["leaves"]:
         r.add_leaf(lf, ID_FOLIAGE)
-    img, z, oid = r.finish(p["psf_sigma"], p["noise_sigma"], rng)
+    img, z, oid = r.finish(p["psf_sigma"], p["noise_sigma"], rng, gain)
     r.z, r.rgb, r.oid = clean["z"], clean["rgb"], clean["oid"]
-    img_c, z_c, oid_c = r.finish(p["psf_sigma"], p["noise_sigma"], rng)
+    img_c, z_c, oid_c = r.finish(p["psf_sigma"], p["noise_sigma"], rng, gain)
     return dict(img=img, img_clean=img_c, z=z, z_clean=z_c, oid=oid, oid_clean=oid_c)
 
 
@@ -649,7 +650,8 @@ def make_scene(out_dir, **overrides):
     vis = np.zeros((len(fruit), n), np.float32)        # visible fraction with foliage
     vis_clean = np.zeros((len(fruit), n), np.float32)  # visible pixels without foliage
     for i, cam in enumerate(cams):
-        out = render_view(p, K, cam, statics, fruit, stems, foliage, rng)
+        gain = 1.0 + rng.normal(0, p["exposure_jitter"]) if p["exposure_jitter"] > 0 else 1.0
+        out = render_view(p, K, cam, statics, fruit, stems, foliage, rng, gain)
         cv2.imwrite(os.path.join(out_dir, "images", f"view_{i:02d}.png"), out["img"])
         cv2.imwrite(os.path.join(out_dir, "images_clean", f"view_{i:02d}.png"), out["img_clean"])
         np.save(os.path.join(out_dir, "gt", f"depth_{i:02d}.npy"), np.minimum(out["z"], 60).astype(np.float16))
