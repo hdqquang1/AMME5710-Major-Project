@@ -23,6 +23,7 @@ Methods
 -------
   single_colour   centre photo + prototype colour detector (finns-branch)
   finn_sai        prototype pipeline: leaf-masked mean SAI on one plane + colour detector
+  *_tuned         the same two with the contour area cap calibrated (fairer to the prototype)
   single_2d       centre photo + colour-free 2-D detector
   median_2d       median SAI on the fruit plane + colour-free 2-D detector
   ours            occlusion-aware SAI + colour-free 3-D detector (this work)
@@ -59,9 +60,13 @@ RESULTS = os.path.join(HERE, "results")
 # Scene set
 # ---------------------------------------------------------------------------
 def scene_list(quick=False):
-    """(name, parameters) of every benchmark scene; seed 0 calibrates, seed 1 tests."""
+    """
+    (name, parameters) of every benchmark scene.  Seeds 0 and 1 are calibration
+    scenes (thresholds, verifier training; also used while developing the
+    method); seeds 2 and 3 are test scenes never looked at during development.
+    """
     out = []
-    for seed in (0, 1):
+    for seed in (0, 1, 2, 3):
         for cov in (0.1, 0.3, 0.5):
             for gap in (0.15, 0.34):
                 out.append((f"cherry_c{int(cov*100):02d}_g{int(gap*100):02d}_s{seed}",
@@ -75,13 +80,21 @@ def scene_list(quick=False):
                         dict(fruit="lime", coverage=cov, foliage_gap=0.34, seed=seed + 20,
                              n_clusters=9)))
     if quick:
-        keep = {"cherry_c30_g34_s0", "cherry_c30_g34_s1", "grape_c30_g34_s0", "grape_c30_g34_s1"}
+        keep = {"cherry_c30_g34_s0", "cherry_c30_g34_s2", "grape_c30_g34_s0", "grape_c30_g34_s2"}
         out = [s for s in out if s[0] in keep]
     return out
 
 
+def generate_scene(item):
+    """Render one benchmark scene (worker process)."""
+    n, p = item
+    t0 = time.time()
+    s = synth.make_scene(os.path.join(DATA, n), **p)
+    return f"generated {n}: coverage {s['coverage_ref']:.2f}, {len(s['fruit'])} fruit, {time.time()-t0:.0f} s"
+
+
 def split_of(name):
-    return "calib" if name.endswith("_s0") else "test"
+    return "calib" if name.endswith(("_s0", "_s1")) else "test"
 
 
 def fruit_of(name):
@@ -92,11 +105,12 @@ def fruit_of(name):
 # Per-scene evaluation helpers
 # ---------------------------------------------------------------------------
 def det_record(dets):
-    """Compact candidate list for the cache (pixel position, radius, score, centre)."""
+    """Compact candidate list for the cache (position, radius, score, centre, features)."""
     return [dict(x=round(d["x"], 2), y=round(d["y"], 2), r_px=round(d["r_px"], 2),
                  score=round(float(d["score"]), 4),
                  centre=[round(v, 5) for v in d["centre"]] if "centre" in d else None,
-                 R=round(d.get("R", 0.0), 5))
+                 R=round(d.get("R", 0.0), 5),
+                 feat={k: round(float(v), 5) for k, v in d.get("feat", {}).items()})
             for d in dets]
 
 
@@ -150,6 +164,8 @@ def run_scene(name):
         res["images"][key] = dict(psnr=evaluate.psnr(img, clean, roi), ssim=evaluate.ssim(img, clean, roi))
     res["dets"]["single_colour"] = det_record(baselines.finn_colour_detect(single, roi))
     res["dets"]["finn_sai"] = det_record(baselines.finn_colour_detect(fsai, roi))
+    res["dets"]["single_colour_tuned"] = det_record(baselines.finn_colour_detect(single, roi, max_area=1e5))
+    res["dets"]["finn_sai_tuned"] = det_record(baselines.finn_colour_detect(fsai, roi, max_area=1e5))
     res["dets"]["single_2d"] = det_record(detect.nms_3d(evaluate.in_roi(
         detect.detect_2d(single, K, z_fruit, fruit=fruit), roi)))
     res["dets"]["median_2d"] = det_record(detect.nms_3d(evaluate.in_roi(
@@ -295,8 +311,8 @@ def run_robust(name):
 # ---------------------------------------------------------------------------
 # Evaluation
 # ---------------------------------------------------------------------------
-METHODS = ["single_colour", "finn_sai", "single_2d", "median_2d", "ours", "ours_noapp",
-           "ours_nohalf", "ours_nosgm", "ours_nomask", "oracle"]
+METHODS = ["single_colour", "single_colour_tuned", "finn_sai", "finn_sai_tuned", "single_2d", "median_2d",
+           "ours", "ours_learned", "ours_noapp", "ours_nohalf", "ours_nosgm", "ours_nomask", "oracle"]
 FIXED = {"single_colour", "finn_sai"}       # prototype detector has no score threshold to tune
 
 
@@ -339,9 +355,47 @@ def calibrate(results, scenes, method, fruits):
     return float(best_t)
 
 
+def add_learned_scores(results):
+    """
+    Score the 'ours' candidates with the random-forest verifier (sai/verify.py).
+
+    Calibration scenes get out-of-fold scores (leave-one-scene-out), so their
+    threshold calibration is not biased by training on the same candidates; test
+    scenes are scored by a model trained on every calibration scene.
+    """
+    from sai import verify
+    data = {}
+    for n, r in results.items():
+        sc = json.load(open(os.path.join(DATA, n, "scene.json")))
+        dets = r["dets"]["ours"]
+        X = verify.feature_matrix(dets, r["fruit"])
+        gts = evaluate.countable_fruit(sc)
+        m = evaluate.match_counts(to_dets(dets), gts)
+        y = np.zeros(len(dets), np.int32)
+        for i, _ in m["matched"]:
+            y[i] = 1
+        data[n] = (X, y)
+    calib = [n for n in results if split_of(n) == "calib"]
+    if len(calib) < 2:
+        return
+    def fit(names_):
+        X = np.vstack([data[n][0] for n in names_])
+        y = np.concatenate([data[n][1] for n in names_])
+        return verify.train(X, y)
+    full = fit(calib)
+    for n, r in results.items():
+        if split_of(n) == "calib":
+            model = fit([c for c in calib if c != n])
+        else:
+            model = full
+        p = verify.fruit_probability(model, data[n][0])
+        r["dets"]["ours_learned"] = [dict(d, score=float(s_)) for d, s_ in zip(r["dets"]["ours"], p)]
+
+
 def evaluate_all(names, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     results = load_results(names)
+    add_learned_scores(results)
     thresholds = {}
     for m in METHODS:
         if m in FIXED:
@@ -451,10 +505,13 @@ def write_markdown(S, path):
     L = ["# Synthetic benchmark summary", "",
          "Test scenes only (seed 1); thresholds calibrated on seed-0 scenes (best pooled F1).", ""]
     names = {"single_colour": "Centre photo + colour detector (prototype)",
+             "single_colour_tuned": "  same, area cap calibrated",
              "finn_sai": "Leaf-masked mean SAI + colour detector (prototype)",
+             "finn_sai_tuned": "  same, area cap calibrated",
              "single_2d": "Centre photo + colour-free 2-D detector",
              "median_2d": "Median SAI + colour-free 2-D detector",
              "ours": "Occlusion-aware SAI + colour-free 3-D detector (ours)",
+             "ours_learned": "  ours + learned colour-free verifier (random forest)",
              "ours_noapp": "  ours without radial-symmetry candidates",
              "ours_nohalf": "  ours without half-aperture selection",
              "ours_nosgm": "  ours without semi-global aggregation",
@@ -586,12 +643,10 @@ def main():
     names = [n for n, _ in scenes]
     os.makedirs(DATA, exist_ok=True)
     if args.stage in ("all", "generate"):
-        for n, p in scenes:
-            if os.path.exists(os.path.join(DATA, n, "scene.json")):
-                continue
-            t0 = time.time()
-            s = synth.make_scene(os.path.join(DATA, n), **p)
-            print(f"generated {n}: coverage {s['coverage_ref']:.2f}, {len(s['fruit'])} fruit, {time.time()-t0:.0f} s", flush=True)
+        todo = [(n, p) for n, p in scenes if not os.path.exists(os.path.join(DATA, n, "scene.json"))]
+        with ProcessPoolExecutor(max_workers=args.workers) as ex:
+            for msg in ex.map(generate_scene, todo):
+                print(msg, flush=True)
     if args.stage in ("all", "run"):
         with ProcessPoolExecutor(max_workers=args.workers) as ex:
             for n, msg in ex.map(run_scene, names):

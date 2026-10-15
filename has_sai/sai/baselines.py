@@ -43,7 +43,12 @@ def finn_sai(rig, fruit_depth):
 
 
 def finn_colour_detect(bgr01, roi, a_min=140, min_area=13, max_area=340):
-    """Red/pink contour detector of the prototype; returns detections with x, y, r_px and score."""
+    """
+    Red/pink contour detector of the prototype; returns detections with x, y, r_px
+    and score = -area.  With a large max_area the score lets the benchmark
+    calibrate the area cap (score >= t  <=>  area <= -t) on the calibration
+    scenes, a tuned variant that gives the prototype its best chance.
+    """
     u8 = np.clip(bgr01 * 255 + 0.5, 0, 255).astype(np.uint8)
     lab = cv2.cvtColor(u8, cv2.COLOR_BGR2LAB)
     r = u8[:, :, 2].astype(np.float32)
@@ -72,5 +77,5 @@ def finn_colour_detect(bgr01, roi, a_min=140, min_area=13, max_area=340):
         if mm["m00"] <= 0:
             continue
         out.append(dict(x=float(mm["m10"] / mm["m00"]), y=float(mm["m01"] / mm["m00"]),
-                        r_px=float(np.sqrt(area / np.pi)), score=float(area), feat={}))
+                        r_px=float(np.sqrt(area / np.pi)), score=-float(area), feat={}))
     return out
