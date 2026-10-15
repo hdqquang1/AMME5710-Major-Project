@@ -15,6 +15,8 @@ Stages
              metrics and timings in data/synthetic/<scene>/results.json.
 3. robust    Robustness study on the test scenes: number of views, pose
              noise and focal-length error.
+3b. factorial Every image source crossed with every detector, per-view voting
+             rivals, and a whole-frame ROI (separates de-occlusion from detection).
 4. evaluate  Calibrate each detector's score threshold on the calibration
              scenes (seed 0, best F1), apply it unchanged to the test scenes
              (seed 1) and write tables and figures to results/.
@@ -31,7 +33,8 @@ Methods
   ours_nohalf     ... without half-aperture selection
   ours_nosgm      ... window costs instead of semi-global aggregation
   ours_nomask     ... without foliage masks (no visibility reasoning)
-  oracle          foliage-free photo + true depth + the same 3-D detector (upper bound)
+  oracle          foliage-free photo + true depth + the same 3-D detector (oracle reference;
+                  not a strict upper bound, its threshold is calibrated separately)
 
 Dependencies: numpy, opencv-python, matplotlib.
 """
@@ -309,6 +312,149 @@ def run_robust(name):
 
 
 # ---------------------------------------------------------------------------
+# Factorial study (council request): image source x detector, two ROIs
+# ---------------------------------------------------------------------------
+def wide_roi(sc):
+    """Whole reference frame minus a 5 % margin (scores false positives everywhere)."""
+    W, H = sc["params"]["width"], sc["params"]["height"]
+    return [int(0.05 * W), int(0.05 * H), int(0.95 * W), int(0.95 * H)]
+
+
+def run_factorial(name):
+    """Every (image source, detector) pair plus per-view voting, on the fruit ROI and the wide ROI."""
+    from sai import factorial
+    sdir = os.path.join(DATA, name)
+    cache = os.path.join(sdir, "factorial.json")
+    if os.path.exists(cache):
+        return name, "cached"
+    sc = json.load(open(os.path.join(sdir, "scene.json")))
+    rig = camera.load_synthetic_rig(sdir)
+    K = rig.views[rig.ref].K
+    fruit = sc["params"]["fruit"]
+    z_fruit = fruit_plane_depth(sc)
+    rois = dict(roi=sc["roi_ref"], wide=wide_roi(sc))
+    out = {}
+    for rname, roi in rois.items():
+        dets = factorial.factorial_detections(sdir, roi, K, z_fruit, fruit)
+        dets["vote|colour"] = baselines.finn_vote(rig, z_fruit, roi)
+        dets["vote|free2d"] = baselines.free_vote(rig, z_fruit, roi, fruit=fruit)
+        out[rname] = {k: det_record(v) for k, v in dets.items()}
+    res = pipeline.deocclude(rig, verbose=False)
+    cands, _ = detect.detect_fruit(res["depth"], res["image"], res["support"], K, fruit=fruit,
+                                   confidence=res["confidence"])
+    zc = np.load(os.path.join(sdir, "gt", f"depth_clean_{rig.ref:02d}.npy")).astype(np.float32)
+    clean = camera.read_image(os.path.join(sdir, "images_clean", f"view_{rig.ref:02d}.png"))
+    oc, _ = detect.detect_fruit(np.minimum(zc, 5.0), clean, np.full(zc.shape, float(len(rig.views)), np.float32),
+                                K, fruit=fruit)
+    for rname, roi in rois.items():
+        out[rname]["ours|relief3d"] = det_record(detect.nms_3d(evaluate.in_roi(cands, roi)))
+        out[rname]["clean|relief3d_truedepth"] = det_record(detect.nms_3d(evaluate.in_roi(oc, roi)))
+    np.savez_compressed(os.path.join(sdir, "deocclusion.npz"), depth=res["depth"], image=res["image"],
+                        support=res["support"], confidence=res["confidence"])
+    with open(cache, "w") as f:
+        json.dump(out, f)
+    return name, "done"
+
+
+def evaluate_factorial(names, out_dir):
+    """Calibrate each (method, ROI, fruit) on seeds 0-1 and report test F1 per seed layout."""
+    caches = {}
+    for n in names:
+        p = os.path.join(DATA, n, "factorial.json")
+        if os.path.exists(p):
+            caches[n] = json.load(open(p))
+    if not caches:
+        return None
+    scenes = {n: json.load(open(os.path.join(DATA, n, "scene.json"))) for n in caches}
+    keys = sorted({k for c in caches.values() for k in c["roi"]})
+    table = {}
+    rows = []
+    for rname in ("roi", "wide"):
+        for fruit in ("cherry", "grape", "lime"):
+            for key in keys:
+                calib = [(caches[n][rname].get(key, []), evaluate.countable_fruit(scenes[n]))
+                         for n in caches if fruit_of(n) == fruit and split_of(n) == "calib"]
+                if not calib:
+                    continue
+                fixed = key.endswith("|colour")          # prototype detector as published: no threshold
+                t = None
+                if not fixed:
+                    scores = sorted({r["score"] for recs, _ in calib for r in recs})
+                    best = (-1, None)
+                    for tt in (np.unique(np.quantile(scores, np.linspace(0, 1, 120))) if scores else []):
+                        tp = fp = fn = 0
+                        for recs, gts in calib:
+                            m = evaluate.match_counts(to_dets(recs, tt), gts)
+                            tp, fp, fn = tp + m["tp"], fp + m["fp"], fn + m["fn"]
+                        f1 = 2 * tp / max(2 * tp + fp + fn, 1)
+                        if f1 > best[0]:
+                            best = (f1, float(tt))
+                    t = best[1]
+                tp = fp = fn = 0
+                per_layout = {}
+                for n in caches:
+                    if fruit_of(n) != fruit or split_of(n) != "test":
+                        continue
+                    m = evaluate.match_counts(to_dets(caches[n][rname].get(key, []), t), evaluate.countable_fruit(scenes[n]))
+                    tp, fp, fn = tp + m["tp"], fp + m["fp"], fn + m["fn"]
+                    lay = n.rsplit("_", 1)[1]
+                    a = per_layout.setdefault(lay, [0, 0, 0])
+                    a[0] += m["tp"]; a[1] += m["fp"]; a[2] += m["fn"]
+                    rows.append(dict(roi=rname, fruit=fruit, method=key, scene=n, coverage=round(scenes[n]["coverage_ref"], 3),
+                                     tp=m["tp"], fp=m["fp"], fn=m["fn"], f1=round(m["f1"], 4),
+                                     count_error=round(m["count_error"], 4), threshold=t))
+                f1 = 2 * tp / max(2 * tp + fp + fn, 1)
+                table.setdefault(rname, {}).setdefault(fruit, {})[key] = dict(
+                    f1=round(f1, 4), tp=tp, fp=fp, fn=fn, threshold=t,
+                    f1_per_layout={k: round(2 * v[0] / max(2 * v[0] + v[1] + v[2], 1), 4) for k, v in per_layout.items()})
+    if rows:
+        with open(os.path.join(out_dir, "factorial_per_scene.csv"), "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+            w.writeheader()
+            w.writerows(rows)
+    with open(os.path.join(out_dir, "factorial.json"), "w") as f:
+        json.dump(table, f, indent=1)
+    srcs = [("single", "centre photo"), ("finn_sai", "prototype masked mean SAI"), ("median_sai", "median SAI"),
+            ("ours", "occlusion-aware SAI (ours)"), ("clean", "foliage-free photo")]
+    dets_ = [("colour", "colour (as published)"), ("colour_tuned", "colour, area cap calibrated"),
+             ("colour_dt", "colour + distance transform"), ("free2d", "colour-free 2-D")]
+    L = ["# Factorial study: image source x detector (test seeds 2-3, simulator)", "",
+         "F1 on the test layouts; thresholds calibrated on seeds 0-1.  Per-layout F1 in brackets.  "
+         "'roi' scores only the fruit region; 'wide' scores the whole frame minus a 5 % margin.", ""]
+    for rname in ("roi", "wide"):
+        for fruit in ("cherry", "grape", "lime"):
+            T = table.get(rname, {}).get(fruit)
+            if not T:
+                continue
+            L += [f"## {fruit}, {rname}", "", "| Image | " + " | ".join(d for _, d in dets_) + " |",
+                  "|---|" + "---|" * len(dets_)]
+            for sk, sl in srcs:
+                cells = []
+                for dk, _ in dets_:
+                    v = T.get(f"{sk}|{dk}")
+                    cells.append("-" if v is None else f"{v['f1']:.3f} ({', '.join(f'{x:.2f}' for x in v['f1_per_layout'].values())})")
+                L.append(f"| {sl} | " + " | ".join(cells) + " |")
+            for k, lab in (("vote|colour", "per-view colour voting (prototype fuse_multi_view)"),
+                           ("vote|free2d", "per-view colour-free 2-D voting"),
+                           ("ours|relief3d", "ours: occlusion-aware SAI + colour-free 3-D detector"),
+                           ("clean|relief3d_truedepth", "oracle: foliage-free photo + true depth + 3-D detector")):
+                v = T.get(k)
+                if v:
+                    L.append(f"| {lab} | F1 {v['f1']:.3f} ({', '.join(f'{x:.2f}' for x in v['f1_per_layout'].values())}); "
+                             f"TP {v['tp']} FP {v['fp']} FN {v['fn']} | | | |")
+            L.append("")
+    # heavy cover: the decisive cells
+    L += ["## Cherries at 50 % foliage (test), F1 by method", ""]
+    for key in ("median_sai|free2d", "finn_sai|colour_dt", "vote|colour", "vote|free2d", "ours|relief3d"):
+        sel = [r for r in rows if r["roi"] == "roi" and r["fruit"] == "cherry" and r["method"] == key and r["coverage"] > 0.45]
+        if sel:
+            tp, fp, fn = sum(r["tp"] for r in sel), sum(r["fp"] for r in sel), sum(r["fn"] for r in sel)
+            L.append(f"- {key}: F1 {2*tp/max(2*tp+fp+fn,1):.3f} (TP {tp}, FP {fp}, FN {fn}, {len(sel)} scenes)")
+    open(os.path.join(out_dir, "factorial.md"), "w").write("\n".join(L) + "\n")
+    return table
+
+
+# ---------------------------------------------------------------------------
 # Evaluation
 # ---------------------------------------------------------------------------
 METHODS = ["single_colour", "single_colour_tuned", "finn_sai", "finn_sai_tuned", "single_2d", "median_2d",
@@ -359,9 +505,10 @@ def add_learned_scores(results):
     """
     Score the 'ours' candidates with the random-forest verifier (sai/verify.py).
 
-    Calibration scenes get out-of-fold scores (leave-one-scene-out), so their
-    threshold calibration is not biased by training on the same candidates; test
-    scenes are scored by a model trained on every calibration scene.
+    Calibration scenes get out-of-fold scores (leave-one-LAYOUT-out: scenes with
+    the same seed share a fruit layout, so all of them are held out together),
+    so their threshold calibration is not biased by training on the same fruit;
+    test scenes are scored by a model trained on every calibration scene.
     """
     from sai import verify
     data = {}
@@ -383,9 +530,10 @@ def add_learned_scores(results):
         y = np.concatenate([data[n][1] for n in names_])
         return verify.train(X, y)
     full = fit(calib)
+    layout = lambda name: (fruit_of(name), name.rsplit("_", 1)[1])   # same seed = same fruit layout
     for n, r in results.items():
         if split_of(n) == "calib":
-            model = fit([c for c in calib if c != n])
+            model = fit([c for c in calib if layout(c) != layout(n)])
         else:
             model = full
         p = verify.fruit_probability(model, data[n][0])
@@ -503,7 +651,10 @@ def summarise(rows, img_rows, results, thresholds):
 
 def write_markdown(S, path):
     L = ["# Synthetic benchmark summary", "",
-         "Test scenes only (seed 1); thresholds calibrated on seed-0 scenes (best pooled F1).", ""]
+         "Test scenes only (seeds 2 and 3, never looked at while developing the method); score thresholds "
+         "and the verifier were calibrated on seeds 0 and 1 (best pooled F1).  Scenes with the same seed "
+         "share one fruit layout, so each fruit type has two test layouts.  All numbers are from the "
+         "simulator.", ""]
     names = {"single_colour": "Centre photo + colour detector (prototype)",
              "single_colour_tuned": "  same, area cap calibrated",
              "finn_sai": "Leaf-masked mean SAI + colour detector (prototype)",
@@ -516,7 +667,7 @@ def write_markdown(S, path):
              "ours_nohalf": "  ours without half-aperture selection",
              "ours_nosgm": "  ours without semi-global aggregation",
              "ours_nomask": "  ours without foliage masks",
-             "oracle": "Foliage-free photo + true depth (upper bound)"}
+             "oracle": "Foliage-free photo + true depth (oracle reference)"}
     for mode, title in (("per_fruit", "Threshold calibrated per fruit type"),
                         ("cherry_only", "One threshold calibrated on cherries only (cross-fruit generalisation)")):
         L += [f"## Counting: {title}", ""]
@@ -585,7 +736,7 @@ def make_figures(rows, img_rows, results, robust, out_dir):
     # F1 vs coverage for cherries (test, per-fruit calibration)
     fig, ax = plt.subplots(1, 2, figsize=(10, 3.6))
     show = [("single_colour", "photo + colour"), ("finn_sai", "masked mean SAI + colour"),
-            ("median_2d", "median SAI + 2-D"), ("ours", "ours"), ("oracle", "upper bound")]
+            ("median_2d", "median SAI + 2-D"), ("ours", "ours"), ("oracle", "oracle reference")]
     for m, lab in show:
         xs, f1s, ces = [], [], []
         for c in (0.1, 0.3, 0.5):
@@ -635,7 +786,7 @@ def make_figures(rows, img_rows, results, robust, out_dir):
 # ---------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--stage", choices=["all", "generate", "run", "robust", "evaluate"], default="all")
+    ap.add_argument("--stage", choices=["all", "generate", "run", "robust", "factorial", "evaluate"], default="all")
     ap.add_argument("--quick", action="store_true", help="4 scenes only (smoke test)")
     ap.add_argument("--workers", type=int, default=3, help="parallel scene processes")
     args = ap.parse_args()
@@ -657,9 +808,14 @@ def main():
         with ProcessPoolExecutor(max_workers=args.workers) as ex:
             for n, msg in ex.map(run_robust, targets):
                 print(f"robust {n}: {msg}", flush=True)
-    if args.stage in ("all", "evaluate"):
+    if args.stage in ("all", "factorial"):
+        with ProcessPoolExecutor(max_workers=args.workers) as ex:
+            for n, msg in ex.map(run_factorial, names):
+                print(f"factorial {n}: {msg}", flush=True)
+    if args.stage in ("all", "evaluate", "factorial"):
         out_dir = os.path.join(RESULTS, "quick" if args.quick else "synthetic")
         S = evaluate_all(names, out_dir)
+        evaluate_factorial(names, out_dir)
         print(open(os.path.join(out_dir, "summary.md")).read())
 
 
