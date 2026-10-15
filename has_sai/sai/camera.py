@@ -105,19 +105,32 @@ def list_images(folder):
     return sorted(paths)
 
 
-def normalise_exposure(rig, max_gain=1.3):
+def normalise_exposure(rig, plane_depth, max_gain=1.3):
     """
-    Per-photo, per-channel gain that matches each photo's median brightness to
-    the reference photo's.  Photo-consistency assumes equal exposure; with locked
-    exposure the gains stay near 1 and nothing changes, with auto exposure they
-    remove the brightness steps between photos.  Returns the gains applied.
+    Per-photo, per-channel exposure gain, measured on the fence plane.
+
+    Each photo is warped onto the reference view through the plane at
+    `plane_depth` (the fence), so the two images show the same surface point at
+    most pixels; the gain is the median of the per-pixel ratios I_ref / I_j over
+    pixels that are valid in both and not near black.  Foliage, which moves
+    between photos, only adds outliers to the median.  (A whole-image median
+    ratio is biased by that motion: on synthetic photos with no exposure change
+    it produced gains of up to 5 %.)  Use only when exposure was not locked.
+    Returns the gains applied.
     """
-    ref = rig.views[rig.ref].image
-    m_ref = np.median(ref.reshape(-1, 3), axis=0)
+    ref = rig.views[rig.ref]
+    h, w = ref.image.shape[:2]
     gains = []
     for v in rig.views:
-        m = np.median(v.image.reshape(-1, 3), axis=0)
-        g = np.clip(m_ref / np.maximum(m, 1e-4), 1.0 / max_gain, max_gain).astype(np.float32)
+        R, t = relative_pose(ref, v)
+        H = plane_homography(ref.K, v.K, R, t, plane_depth)
+        wj = warp_by_homography(v.image, H, (w, h), border_value=-1.0)
+        ok = (wj[..., 0] > -0.5) & (ref.image.min(axis=2) > 0.05) & (wj.min(axis=2) > 0.05)
+        if ok.sum() < 1000:
+            gains.append([1.0, 1.0, 1.0])
+            continue
+        ratio = ref.image[ok] / wj[ok]
+        g = np.clip(np.median(ratio, axis=0), 1.0 / max_gain, max_gain).astype(np.float32)
         v.image = np.clip(v.image * g[None, None, :], 0.0, 1.0)
         gains.append(g.tolist())
     return gains

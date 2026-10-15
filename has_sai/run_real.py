@@ -109,6 +109,22 @@ def build_rig(image_dir, search_root, scale, spacing, fx_full, ref, poses):
     return camera.Rig(views, ref), info
 
 
+def rig_with_poses(image_dir, rig, scale):
+    """
+    Rig of a second pass at the same rail positions (e.g. the foliage-free pass),
+    reusing the poses and intrinsics of `rig`.  The carriage stops at the same
+    tape marks, so re-estimating poses is unnecessary, and the foliage-free
+    pass is a hard case for structure from motion (the repetitive lattice
+    produces matches that are consistent with the epipolar geometry but wrong).
+    """
+    paths = camera.list_images(image_dir)
+    if len(paths) != len(rig.views):
+        raise ValueError(f"{image_dir} has {len(paths)} photos, the main pass has {len(rig.views)}")
+    views = [camera.View(os.path.basename(p), camera.read_image(p, scale), v.K, v.R, v.t)
+             for p, v in zip(paths, rig.views)]
+    return camera.Rig(views, rig.ref)
+
+
 def default_threshold(fruit):
     """Score threshold calibrated on the synthetic calibration scenes, if available."""
     p = os.path.join(HERE, "results", "synthetic", "summary.json")
@@ -132,8 +148,8 @@ def process(name, image_dir, search_root, args, out_root):
     rig, info = build_rig(image_dir, search_root, args.scale, args.spacing, args.fx_full,
                           args.ref, args.poses)
     print(f"[{name}] {len(rig.views)} photos, poses: {info['poses']}")
-    if not args.no_exposure_norm:
-        gains = camera.normalise_exposure(rig)
+    if args.exposure_norm:
+        gains = camera.normalise_exposure(rig, args.gain_depth)
         info["exposure_gain_range"] = [float(np.min(gains)), float(np.max(gains))]
     cfg = dict(z_near=args.z_near, z_far=args.z_far, wall_front=args.wall_front)
     if args.z_split:
@@ -186,7 +202,9 @@ def process(name, image_dir, search_root, args, out_root):
                    seconds_total=time.time() - t0, **info)
     # foliage-free comparison
     if args.clean:
-        crig, _ = build_rig(args.clean, args.clean, args.scale, args.spacing, args.fx_full, args.ref, args.poses)
+        crig = rig_with_poses(args.clean, rig, args.scale)
+        if args.exposure_norm:
+            camera.normalise_exposure(crig, args.gain_depth)
         clean = crig.views[crig.ref].image
         aligned = align_ecc(res["image"], clean)
         summary["psnr_vs_clean"] = evaluate.psnr(aligned, clean, roi)
@@ -243,7 +261,9 @@ def main():
                     help="fruit radius range [mm] (default: per fruit type)")
     ap.add_argument("--wall-front", type=float, default=0.07,
                     help="how far fruit can hang in front of the fence [m]")
-    ap.add_argument("--no-exposure-norm", action="store_true", help="skip per-photo gain normalisation")
+    ap.add_argument("--exposure-norm", action="store_true",
+                    help="match per-photo exposure on the fence plane (only if exposure was not locked)")
+    ap.add_argument("--gain-depth", type=float, default=0.9, help="fence depth used for --exposure-norm [m]")
     ap.add_argument("--z-near", type=float, default=0.30)
     ap.add_argument("--z-far", type=float, default=1.50)
     ap.add_argument("--z-split", type=float, default=None, help="foliage/background split depth [m] (default: Otsu)")
