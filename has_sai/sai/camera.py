@@ -105,6 +105,24 @@ def list_images(folder):
     return sorted(paths)
 
 
+def normalise_exposure(rig, max_gain=1.3):
+    """
+    Per-photo, per-channel gain that matches each photo's median brightness to
+    the reference photo's.  Photo-consistency assumes equal exposure; with locked
+    exposure the gains stay near 1 and nothing changes, with auto exposure they
+    remove the brightness steps between photos.  Returns the gains applied.
+    """
+    ref = rig.views[rig.ref].image
+    m_ref = np.median(ref.reshape(-1, 3), axis=0)
+    gains = []
+    for v in rig.views:
+        m = np.median(v.image.reshape(-1, 3), axis=0)
+        g = np.clip(m_ref / np.maximum(m, 1e-4), 1.0 / max_gain, max_gain).astype(np.float32)
+        v.image = np.clip(v.image * g[None, None, :], 0.0, 1.0)
+        gains.append(g.tolist())
+    return gains
+
+
 # ---------------------------------------------------------------------------
 # Synthetic scenes (cameras.json written by synth.py)
 # ---------------------------------------------------------------------------
@@ -349,3 +367,65 @@ def inverse_depth_samples(z_near, z_far, step_px, f_px, baseline):
     d_inv = step_px / (f_px * max(baseline, 1e-6))
     n = max(2, int(np.ceil((inv0 - inv1) / d_inv)) + 1)
     return 1.0 / np.linspace(inv0, inv1, n)
+
+
+# ---------------------------------------------------------------------------
+# EXIF focal length (JPEG only), without extra libraries
+# ---------------------------------------------------------------------------
+def exif_focal_35mm(path):
+    """
+    FocalLengthIn35mmFilm (EXIF tag 0xA405) of a JPEG, or None.
+
+    Minimal TIFF/EXIF walk: APP1 'Exif' segment -> IFD0 -> Exif sub-IFD (0x8769).
+    """
+    try:
+        with open(path, "rb") as f:
+            data = f.read(256 * 1024)
+    except OSError:
+        return None
+    i = data.find(b"Exif\x00\x00")
+    if i < 0:
+        return None
+    t = data[i + 6:]
+    if t[:2] == b"II":
+        end = "<"
+    elif t[:2] == b"MM":
+        end = ">"
+    else:
+        return None
+
+    def u16(o):
+        return struct.unpack(end + "H", t[o:o + 2])[0]
+
+    def u32(o):
+        return struct.unpack(end + "I", t[o:o + 4])[0]
+
+    def ifd_entries(off):
+        n = u16(off)
+        for k in range(n):
+            e = off + 2 + 12 * k
+            yield u16(e), u16(e + 2), u32(e + 4), e + 8
+
+    try:
+        exif_off = None
+        for tag, typ, cnt, vo in ifd_entries(u32(4)):
+            if tag == 0x8769:
+                exif_off = u32(vo)
+        if exif_off is None:
+            return None
+        for tag, typ, cnt, vo in ifd_entries(exif_off):
+            if tag == 0xA405:
+                return float(u16(vo))
+    except (struct.error, IndexError):
+        return None
+    return None
+
+
+def K_from_35mm(f35, width, height):
+    """
+    Pinhole K from a 35 mm-equivalent focal length.  The equivalence is defined on
+    the image diagonal (43.27 mm for the 36 x 24 mm frame), so
+    f_px = f35 * sqrt(W^2 + H^2) / 43.27.  Principal point at the image centre.
+    """
+    f = f35 * np.hypot(width, height) / np.hypot(36.0, 24.0)
+    return np.array([[f, 0, (width - 1) / 2.0], [0, f, (height - 1) / 2.0], [0, 0, 1]], np.float64)
