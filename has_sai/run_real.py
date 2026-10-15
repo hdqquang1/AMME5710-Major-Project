@@ -17,7 +17,8 @@ names sort in rail order).  Poses come from, in order of preference:
 The rail spacing (--spacing, default 0.05 m) fixes the metric scale.
 
 Outputs (results/real/<capture>/): leaf-free image, depth map, foliage masks,
-detection overlay, detections.csv (pixel and 3-D positions) and summary.json.
+detection overlay, detections.csv (pixel and 3-D positions), a coloured point
+cloud of the leaf-free surface (leaf_free_cloud.ply) and summary.json.
 With --clean (the same rail positions without foliage) the leaf-free image is
 compared with the clean centre photo (PSNR/SSIM after ECC alignment) and the
 clean capture is counted too.  With --labels (CSV of x_px, y_px in
@@ -188,6 +189,7 @@ def process(name, image_dir, search_root, args, out_root):
                     0.35, (0, 255, 0), 1, cv2.LINE_AA)
     cv2.putText(vis, f"{len(dets)} fruit", (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
     cv2.imwrite(os.path.join(out, "detections.png"), vis)
+    write_ply(os.path.join(out, "leaf_free_cloud.ply"), res["depth_render"], res["image"], K, res["support"] >= 1)
     with open(os.path.join(out, "detections.csv"), "w", newline="") as f:
         wr = csv.writer(f)
         wr.writerow(["id", "x_px", "y_px", "x_px_full", "y_px_full", "X_m", "Y_m", "Z_m", "radius_mm", "score"])
@@ -228,6 +230,30 @@ def process(name, image_dir, search_root, args, out_root):
         json.dump(summary, f, indent=1, default=float)
     print(f"[{name}] counted {len(dets)} fruit (threshold {thr:.1f}, {thr_src}); outputs in {os.path.relpath(out, REPO)}")
     return summary
+
+
+def write_ply(path, depth, image, K, valid, step=2):
+    """
+    Coloured point cloud of the leaf-free surface (ASCII PLY, metres, reference
+    camera frame): every `step`-th pixel back-projected at its background depth.
+    Opens in MeshLab, CloudCompare or Open3D for a 3-D figure.
+    """
+    h, w = depth.shape
+    v, u = np.mgrid[0:h:step, 0:w:step]
+    z = depth[::step, ::step]
+    ok = valid[::step, ::step] & np.isfinite(z) & (z > 0)
+    Ki = np.linalg.inv(K)
+    x = (Ki[0, 0] * u + Ki[0, 2]) * z
+    y = (Ki[1, 1] * v + Ki[1, 2]) * z
+    col = np.clip(image[::step, ::step] * 255, 0, 255).astype(np.uint8)
+    pts = np.stack([x[ok], y[ok], z[ok]], 1)
+    rgb = col[ok][:, ::-1]
+    with open(path, "w") as f:
+        f.write("ply\nformat ascii 1.0\n")
+        f.write(f"element vertex {len(pts)}\nproperty float x\nproperty float y\nproperty float z\n")
+        f.write("property uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n")
+        for (a, b, c), (r_, g_, b_) in zip(pts, rgb):
+            f.write(f"{a:.4f} {b:.4f} {c:.4f} {r_} {g_} {b_}\n")
 
 
 def align_ecc(img, target):
