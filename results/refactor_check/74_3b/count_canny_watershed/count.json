@@ -1,0 +1,6 @@
+{
+  "method": "canny_watershed",
+  "count": 23,
+  "estimated_berry_area_px": 265.72520208670284,
+  "note": "Automated count of visible regions; not verified and excludes hidden berries."
+}

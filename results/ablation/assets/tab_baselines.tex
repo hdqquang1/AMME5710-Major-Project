@@ -1,0 +1,22 @@
+\begin{tabular}{@{}lcccccccccccc@{}}
+\toprule
+Method & \multicolumn{3}{c}{3 branches} & \multicolumn{3}{c}{4 branches} & \multicolumn{3}{c}{5 branches} & \multicolumn{3}{c}{6 branches}\\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}\cmidrule(lr){11-13}
+ & R & P & F1 & R & P & F1 & R & P & F1 & R & P & F1\\
+\midrule
+Single view & 68 & 85 & -- & 49 & 81 & -- & 42 & 86 & -- & 25 & 41 & --\\
+\addlinespace[2pt]
+Mask union & 95 & 66 & 0.83 & 94 & 59 & 0.76 & 94 & 63 & 0.73 & 60 & 41 & 0.55\\
+Mask majority & 75 & 97 & 0.72 & 46 & 95 & 0.48 & 22 & 92 & 0.21 & 14 & 83 & 0.21\\
+\addlinespace[2pt]
+SA mean, depth shift & 85 & 88 & 0.72 & 76 & 79 & 0.21 & 65 & 83 & 0.08 & 0 & 0 & 0.00\\
+SA median, depth shift & 83 & 89 & 0.72 & 71 & 76 & 0.54 & 50 & 88 & 0.08 & 0 & 0 & 0.00\\
+SA masked mean, depth shift & 95 & 65 & 0.78 & 95 & 56 & 0.55 & 93 & 60 & 0.50 & 0 & 0 & 0.00\\
+\addlinespace[2pt]
+SA mean, our alignment & 87 & 87 & 0.56 & 74 & 77 & 0.31 & 80 & 76 & 0.25 & 45 & 73 & 0.00\\
+SA median, our alignment & 90 & 85 & 0.84 & 71 & 85 & 0.68 & 53 & 89 & 0.44 & 28 & 73 & 0.33\\
+SA masked mean, our alignment & 95 & 76 & 0.79 & 94 & 64 & 0.78 & 89 & 70 & 0.72 & 61 & 65 & 0.41\\
+\addlinespace[2pt]
+Ours & 94 & 80 & 0.79 & 87 & 80 & 0.76 & 87 & 82 & 0.77 & 42 & 77 & 0.55\\
+\bottomrule
+\end{tabular}

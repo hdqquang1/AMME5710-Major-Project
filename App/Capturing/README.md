@@ -29,5 +29,5 @@ from the repository root. Photos that are already PNG or JPEG can be placed in
 
 The 40 and 60 mm spacings in the report are subsets of the 20 mm captures (every second or
 third photo around the same reference), not separate captures. See
-[../../Captures/README.md](../../Captures/README.md) for the folder layout and where the photos
+[../../data/README.md](../../data/README.md) for the folder layout and where the photos
 are kept.
