@@ -83,14 +83,14 @@ for u in [0.12, 0.3, 0.48, 0.66, 0.84]:
     inside.append(f'\\draw[stem, line width=0.55pt] ({x:.3f},{y:.3f}) .. controls ({x + 0.05:.3f},{y - 0.4:.3f}) '
                   f'and ({x - 0.05:.3f},{y - 0.8:.3f}) .. ({x + 0.02:.3f},{y - hang:.3f});')
     inside.append(cluster(x + 0.02, y - hang + 0.05, 0.058, rng.uniform(0.5, 0.65), rng.choice(['grapeA', 'grapeB'])))
-for u, drop in [(0.04, 1.4), (0.42, 0.75), (0.97, 1.2)]:
+for u, drop in [(0.02, 1.5), (0.16, 1.1), (0.3, 1.45), (0.45, 0.95), (0.6, 1.4), (0.74, 1.05), (0.88, 1.5), (0.99, 1.2)]:
     x = HX0 + u * (HX1 - HX0)
     y = HY1 + 0.05
     inside.append(f'\\draw[stem, line width=0.8pt] ({x:.3f},{y:.3f}) .. controls ({x + 0.12:.3f},{y - 0.45:.3f}) '
                   f'and ({x - 0.12:.3f},{y - 0.9:.3f}) .. ({x + 0.04:.3f},{y - drop:.3f});')
-    for k in range(2):
-        f = (k + 0.7) / 2.4
-        inside.append(vine_leaf(x + rng.uniform(-0.18, 0.18), y - f * drop, rng.uniform(0.16, 0.2),
+    for k in range(3):
+        f = (k + 0.6) / 3.3
+        inside.append(vine_leaf(x + rng.uniform(-0.18, 0.18), y - f * drop, rng.uniform(0.17, 0.23),
                                 rng.uniform(-0.6, 0.6), rng.choice(['leafA', 'leafB', 'leafC'])))
 
 tex = r'''\documentclass[tikz,border=0pt]{standalone}
@@ -102,7 +102,7 @@ tex = r'''\documentclass[tikz,border=0pt]{standalone}
 \definecolor{backwall}{HTML}{6F9E73}\definecolor{lit}{HTML}{FFF2B0}
 \definecolor{leafA}{HTML}{4E8A3A}\definecolor{leafB}{HTML}{5F9C45}\definecolor{leafC}{HTML}{3F7531}
 \definecolor{grapeA}{HTML}{A3243B}\definecolor{grapeB}{HTML}{8A1E3A}\definecolor{stemc}{HTML}{6B4E2E}
-\definecolor{railc}{HTML}{E9DCC0}\definecolor{steel}{HTML}{9AA0A6}\definecolor{axis}{HTML}{2F74C0}
+\definecolor{railc}{HTML}{E9DCC0}\definecolor{tape}{HTML}{EFE6C8}\definecolor{steel}{HTML}{9AA0A6}\definecolor{axis}{HTML}{2F74C0}
 \tikzset{stem/.style={stemc}, leafedge/.style={black!60!leafC}, leafvein/.style={white!70!leafA},
          lab/.style={font=\scriptsize, anchor=west, text=black!80}, lead/.style={black!45, line width=0.35pt}}
 \begin{document}
@@ -128,26 +128,27 @@ tex = r'''\documentclass[tikz,border=0pt]{standalone}
 \fill[steel] (0.45,1.12) rectangle (5.75,1.36);
 \draw[black!45, line width=0.3pt] (0.45,1.24) -- (5.75,1.24);
 \foreach \x in {0.8,1.2,...,5.6} \fill[black!35] (\x,1.18) circle (0.012);
-\fill[black!65] (2.3,1.1) rectangle (2.9,1.42);
+\fill[black!65] (2.25,1.1) rectangle (2.95,1.5);
 % phone on a short holder on the carriage, camera facing the box
-\fill[black!55] (2.47,1.6) rectangle (2.73,1.72);
-\fill[black!85, rounded corners=1.5pt] (2.42,1.72) rectangle (2.78,2.42);
-\fill[black!60, rounded corners=1pt] (2.46,2.19) rectangle (2.6,2.37);
-\fill[black!20] (2.505,2.32) circle (0.025) (2.555,2.24) circle (0.025) (2.505,2.24) circle (0.02);
-\draw[axis, densely dashed, line width=0.5pt] (2.53,2.27) -- (2.9,2.5);
+\fill[black!85, rounded corners=1.5pt] (2.42,1.28) rectangle (2.78,1.98);
+\fill[tape, opacity=0.85] (2.33,1.3) rectangle (2.87,1.42);
+\fill[tape, opacity=0.85] (2.33,1.55) rectangle (2.87,1.67);
+\fill[black!60, rounded corners=1pt] (2.46,1.75) rectangle (2.6,1.93);
+\fill[black!20] (2.505,1.88) circle (0.025) (2.555,1.8) circle (0.025) (2.505,1.8) circle (0.02);
+\draw[axis, densely dashed, line width=0.5pt] (2.53,1.83) -- (2.95,2.4);
 % lamp at the middle of the rail, on the viewer's side, shining straight into the box
 \fill[lit, opacity=0.45] (3.2,1.95) -- (''' + f'{HX0 + 0.6},{HY1 - 0.1}) -- ({HX1 - 0.3},{HY1 - 0.1}' + r''') -- cycle;
 \fill[black!70] (3.35,0.08) ellipse (0.3 and 0.07);
 \draw[black!75, line width=1.1pt] (3.35,0.1) -- (3.55,1.0) -- (3.25,1.8);
 \fill[black!80] (3.0,1.78) -- (3.25,2.12) -- (3.5,1.9) -- (3.3,1.62) -- cycle;
 \fill[lit] (3.18,1.95) circle (0.07);
-\draw[lead] (2.9,2.5) -- (7.05,5.38); \node[lab, text=axis] at (7.1,5.38) {optical axis};
+\draw[lead] (2.95,2.4) -- (7.05,5.38); \node[lab, text=axis] at (7.1,5.38) {optical axis};
 \draw[lead] ''' + f'({(sx0 + sx1) / 2 + 0.6:.2f},{sy + 0.01:.2f})' + r''' -- (7.05,4.69); \node[lab] at (7.1,4.69) {slit, 2\,cm from each side};
 \draw[lead] (''' + f'{X1 + 0.5},{Y1 - 0.4}' + r''') -- (7.05,4.00); \node[lab] at (7.1,4.00) {closed cardboard box};
 \draw[lead] (''' + f'{HX1},{HY1 - 0.15}' + r''') -- (7.05,3.31); \node[lab] at (7.1,3.31) {viewing hole, 3\,cm border};
 \draw[lead] (''' + f'{HX1 - 0.3},{HY1 - 0.35}' + r''') -- (7.05,2.62); \node[lab] at (7.1,2.62) {grapes back, vines front};
 \draw[lead] (3.45,1.95) -- (7.05,1.93); \node[lab] at (7.1,1.93) {lamp at the middle of the rail};
-\draw[lead] (2.78,2.1) -- (7.05,1.24); \node[lab] at (7.1,1.24) {iPhone, portrait, on the rail};
+\draw[lead] (2.87,1.61) -- (7.05,1.24); \node[lab] at (7.1,1.24) {iPhone taped to the carriage};
 \draw[lead] (5.9,0.8) -- (7.05,0.55); \node[lab] at (7.1,0.55) {upright rail, 20\,mm stops};
 \end{scope}
 \end{tikzpicture}
