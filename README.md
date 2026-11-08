@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner/banner.png" width="100%" alt="amme5710 team c banner: estimating healthy grape yields for vineyards, occlusion removal from a smartphone sweep, for counting grapes behind leaves. Ivy and grape bunches across the top; dinh, has, finn, November 2026.">
+  <img src="docs/banner/banner.png" width="100%" alt="amme5710 team c banner: estimating healthy grape yields for vineyards, occlusion removal and segmentation to distinguish ripe from unripe crop. Ivy and grape bunches over the title; dinh, has, finn, November 2026.">
 </p>
 
 <p align="center">
@@ -126,7 +126,7 @@ App/Explored/                the earlier prototypes and the COLMAP experiment
 has_sai/                     a colour-free, depth-based variant, tested in simulation
 data/                        the captures (not in git; its README says where they are)
 report/                      the report's LaTeX source and PDF
-docs/banner/                 this page's banner, drawn in TikZ by make_banner.py
+docs/banner/                 this page's banner, from the team's seminar title slide
 ```
 
 Each folder has a README: [results](results/README.md), [data](data/README.md),
