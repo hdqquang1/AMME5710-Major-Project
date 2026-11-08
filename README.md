@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner/banner.png" width="100%" alt="Top-down sketch of the experiment: seven phone positions on a rail, a row of leaves and red grapes behind them. Three rays reach the target bunch between the leaves and the others stop at a leaf. Title: Smartphone-only occlusion removal for counting grapes behind leaves.">
+  <img src="docs/banner/banner.png" width="100%" alt="amme5710 team c banner: estimating healthy grape yields for vineyards, occlusion removal from a smartphone sweep, for counting grapes behind leaves. Ivy and grape bunches across the top; dinh, has, finn, November 2026.">
 </p>
 
 <p align="center">

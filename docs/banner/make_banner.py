@@ -1,10 +1,6 @@
-"""Write banner.tex, the README's cover banner, as a TikZ picture.
-
-A top-down view of the experiment: seven phone positions on the rail, a layer of leaves and,
-behind it, the fruit. Rays run from each phone to one bunch; the leaves are placed by a seeded
-search so that rays which hit a leaf stop there and exactly three well-separated rays reach the
-fruit, which is the consensus rule (at least three views, at least 40 mm apart) in picture form.
-The geometry is computed here, so the picture is consistent with itself.
+"""Write banner.tex, the README's cover banner, in the style of the team's seminar title slide:
+lavender ground, grainy purple, olive and orange blobs, ivy with grape bunches, and a large
+lowercase title. Seeded, so the picture is reproducible.
 
     python3 make_banner.py && pdflatex banner.tex && pdftoppm -png -r 200 -singlefile banner.pdf banner
 """
@@ -13,154 +9,105 @@ import pathlib
 import random
 
 HERE = pathlib.Path(__file__).resolve().parent
-
-RAIL_Y, LENS_Y, FRUIT_Y = 0.95, 1.10, 5.05
-CAMS = [1.3 + i * 1.15 for i in range(7)]
-TARGET = (4.75, FRUIT_Y)
+rng = random.Random(5710)
+W, H = 20.0, 6.4
 
 
-def ellipse_hit(p0, p1, leaf):
-    """First parameter t in [0, 1] where segment p0-p1 enters the leaf's ellipse, or None."""
-    cx, cy, a, b, th = leaf
-    c, s = math.cos(-th), math.sin(-th)
-    def to_local(p):
-        x, y = p[0] - cx, p[1] - cy
-        return x * c - y * s, x * s + y * c
-    (x0, y0), (x1, y1) = to_local(p0), to_local(p1)
-    dx, dy = x1 - x0, y1 - y0
-    A = (dx / a) ** 2 + (dy / b) ** 2
-    B = 2 * (x0 * dx / a ** 2 + y0 * dy / b ** 2)
-    C = (x0 / a) ** 2 + (y0 / b) ** 2 - 1
-    disc = B * B - 4 * A * C
-    if disc < 0:
-        return None
-    t = (-B - math.sqrt(disc)) / (2 * A)
-    return t if 0 <= t <= 1 else None
+def leaf(cx, cy, size, rot, shade):
+    """An ivy leaf: five pointed lobes, a light centre and veins to each tip."""
+    pts, tips = [], []
+    for k in range(200):
+        t = 2 * math.pi * k / 200
+        lobe = abs(math.cos(2.5 * (t - math.pi / 2))) ** 1.4
+        r = size * 1.3 * (0.62 + 0.38 * lobe) * (0.75 if math.sin(t) < -0.2 else 1.0)
+        pts.append((cx + r * math.cos(t + rot), cy + r * math.sin(t + rot)))
+    for k in range(5):
+        t = math.pi / 2 + 2 * math.pi * k / 5
+        r = size * 1.3 * (0.75 if math.sin(t) < -0.2 else 1.0) * 0.92
+        tips.append((cx + r * math.cos(t + rot), cy + r * math.sin(t + rot)))
+    path = ' -- '.join(f'({x:.3f},{y:.3f})' for x, y in pts)
+    out = [f'\\shade[top color={shade}L, bottom color={shade}D, shading angle={math.degrees(rot):.0f}] {path} -- cycle;']
+    out += [f'\\draw[vein, line width=0.45pt] ({cx:.3f},{cy:.3f}) -- ({x:.3f},{y:.3f});' for x, y in tips]
+    return '\n'.join(out)
 
 
-def layout(seed):
-    rng = random.Random(seed)
-    leaves, x = [], 1.05
-    while x < 8.7:
-        a = rng.uniform(0.46, 0.62)          # half length
-        b = a * rng.uniform(0.40, 0.48)       # half width
-        leaves.append((x + rng.uniform(-0.12, 0.12), rng.uniform(2.65, 3.35), a, b, math.radians(rng.uniform(-38, 38))))
-        x += rng.uniform(0.82, 1.10)
-    return leaves
-
-
-def rays(leaves):
+def bunch(cx, cy, r, rows):
     out = []
-    for cx in CAMS:
-        p0 = (cx, LENS_Y)
-        hits = [t for t in (ellipse_hit(p0, TARGET, lf) for lf in leaves) if t is not None]
-        out.append(min(hits) if hits else None)
-    return out
+    for i, n in enumerate(rows):
+        for j in range(n):
+            x = cx + (j - (n - 1) / 2) * 1.9 * r + rng.uniform(-0.02, 0.02)
+            y = cy - i * 1.6 * r
+            out.append(f'\\shade[ball color=grape] ({x:.3f},{y:.3f}) circle ({r:.3f});')
+    return '\n'.join(out)
 
 
-def search():
-    for seed in range(20000):
-        leaves = layout(seed)
-        r = rays(leaves)
-        free = [i for i, t in enumerate(r) if t is None]
-        if len(free) == 3 and min(b - a for a, b in zip(free, free[1:])) >= 2 and free[0] >= 1 and free[-1] <= 5:
-            # keep leaves apart so they read as separate leaves
-            if all(abs(l1[0] - l2[0]) > 0.7 for l1, l2 in zip(leaves, leaves[1:])):
-                return seed, leaves, r
-    raise SystemExit('no layout found')
+def vine(p):
+    return (f'\\draw[stem, line width=1.4pt, line cap=round] ({p[0][0]},{p[0][1]}) .. controls ({p[1][0]},{p[1][1]}) '
+            f'and ({p[2][0]},{p[2][1]}) .. ({p[3][0]},{p[3][1]});')
 
 
-def leaf_tikz(leaf, shade):
-    cx, cy, a, b, th = leaf
-    return (f'\\begin{{scope}}[shift={{({cx:.3f},{cy:.3f})}},rotate={math.degrees(th):.1f}]\n'
-            f'  \\fill[{shade}] ({-a:.3f},0) .. controls ({-a * 0.35:.3f},{b * 1.55:.3f}) and ({a * 0.45:.3f},{b * 1.35:.3f}) .. ({a:.3f},0)\n'
-            f'        .. controls ({a * 0.45:.3f},{-b * 1.35:.3f}) and ({-a * 0.35:.3f},{-b * 1.55:.3f}) .. cycle;\n'
-            f'  \\draw[leafvein,line width=0.5pt] ({-a * 0.92:.3f},0) -- ({a * 0.9:.3f},0);\n'
-            f'  \\draw[leafvein,line width=0.35pt] ({-a * 0.2:.3f},0) -- ({a * 0.05:.3f},{b * 0.62:.3f}) ({a * 0.2:.3f},0) -- ({a * 0.45:.3f},{-b * 0.55:.3f});\n'
-            f'\\end{{scope}}')
+def tendril(x, y, s, flip=1):
+    return (f'\\draw[stem, line width=0.7pt] ({x:.2f},{y:.2f}) .. controls ({x + 0.25 * s * flip:.2f},{y + 0.3 * s:.2f}) '
+            f'and ({x + 0.45 * s * flip:.2f},{y + 0.05 * s:.2f}) .. ({x + 0.3 * s * flip:.2f},{y - 0.1 * s:.2f}) '
+            f'.. controls ({x + 0.2 * s * flip:.2f},{y - 0.18 * s:.2f}) and ({x + 0.15 * s * flip:.2f},{y - 0.02 * s:.2f}) '
+            f'.. ({x + 0.24 * s * flip:.2f},{y + 0.02 * s:.2f});')
 
 
-def bunch(cx, cy, r, n_rows, shade):
-    parts = []
-    y = cy + r * 1.6
-    for row, n in enumerate(n_rows):
-        x0 = cx - (n - 1) * r * 0.98
-        for k in range(n):
-            parts.append(f'\\shade[ball color={shade}] ({x0 + k * r * 1.96:.3f},{y - row * r * 1.62:.3f}) circle ({r:.3f});')
-    parts.insert(0, f'\\draw[stem,line width=1pt] ({cx:.3f},{cy + r * 2.7:.3f}) -- ({cx:.3f},{cy + r * 1.9:.3f});')
-    return '\n'.join(parts)
+blobs = [f'\\fill[{c}, path fading=fade out, opacity={o}] ({x},{y}) circle ({r});'
+         for x, y, r, c, o in [(1.0, 0.3, 4.6, 'blobP', 1.0), (0.0, -0.4, 3.6, 'blobG', 0.95),
+                               (4.0, 0.5, 2.8, 'blobO', 0.7), (7.0, 0.3, 3.4, 'blobP', 0.75),
+                               (9.5, -0.4, 2.2, 'blobK', 0.35), (2.6, 2.6, 2.4, 'blobP', 0.35),
+                               (17.6, 4.6, 1.6, 'blobG', 0.25)]]
 
+grain = []
+for _ in range(5200):
+    x, y = rng.uniform(0, W), rng.uniform(0, H * 0.62)
+    if rng.random() < max(0.0, 1 - x / 12):
+        c = rng.choice(['blobP', 'blobG', 'blobO', 'white', 'black'])
+        grain.append(f'\\fill[{c}, opacity={rng.uniform(0.15, 0.45):.2f}] ({x:.3f},{y:.3f}) circle (0.016);')
 
-seed, leaves, hit_t = search()
-free = [i for i, t in enumerate(hit_t) if t is None]
-span_mm = (free[-1] - free[0]) * 20
-
-lines = []
-for i, (cx, t) in enumerate(zip(CAMS, hit_t)):
-    p0 = (cx, LENS_Y)
-    if t is None:
-        lines.append(f'\\draw[ray] ({cx:.3f},{LENS_Y:.3f}) -- ({TARGET[0]:.3f},{TARGET[1] - 0.05:.3f});')
-    else:
-        hx, hy = p0[0] + t * (TARGET[0] - p0[0]), p0[1] + t * (TARGET[1] - p0[1])
-        lines.append(f'\\draw[blocked] ({cx:.3f},{LENS_Y:.3f}) -- ({hx:.3f},{hy:.3f});')
-        lines.append(f'\\node[cross] at ({hx:.3f},{hy:.3f}) {{}};')
-
-cams = '\n'.join(
-    f'\\fill[phone, rounded corners=1.2pt] ({x - 0.23:.3f},{RAIL_Y - 0.13:.3f}) rectangle ({x + 0.23:.3f},{RAIL_Y + 0.13:.3f});\n'
-    f'\\fill[lens] ({x:.3f},{RAIL_Y + 0.07:.3f}) circle (0.05);' for x in CAMS)
-ticks = '\n'.join(f'\\draw[railtick] ({x:.3f},{RAIL_Y - 0.25:.3f}) -- ({x:.3f},{RAIL_Y - 0.35:.3f});' for x in CAMS)
+ivy = [vine([(5.6, 6.6), (6.4, 5.4), (7.6, 5.6), (8.8, 4.6)]), vine([(8.8, 4.6), (9.6, 4.0), (10.4, 4.5), (11.0, 4.2)]),
+       vine([(15.0, 6.6), (15.3, 5.4), (16.6, 5.6), (17.4, 4.6)]), vine([(17.4, 4.6), (18.2, 3.8), (19.2, 4.4), (20.2, 3.9)]),
+       tendril(7.9, 5.3, 0.9), tendril(10.2, 4.35, 0.8, -1), tendril(16.2, 5.35, 0.9, -1), tendril(18.8, 4.15, 0.8)]
+leaves = [(6.1, 5.75, 0.55, 0.2, 'leafA'), (7.0, 4.95, 0.62, -0.3, 'leafB'), (8.3, 5.85, 0.5, 0.5, 'leafA'),
+          (9.2, 4.55, 0.5, -0.1, 'leafB'), (10.6, 4.65, 0.36, 0.4, 'leafC'), (5.2, 6.2, 0.4, -0.6, 'leafC'),
+          (15.6, 5.9, 0.5, -0.2, 'leafA'), (16.5, 5.0, 0.6, 0.3, 'leafB'), (17.6, 5.75, 0.55, -0.4, 'leafA'),
+          (18.6, 4.5, 0.58, 0.1, 'leafB'), (19.6, 5.4, 0.6, -0.5, 'leafA'), (14.7, 5.0, 0.38, 0.6, 'leafC')]
+grapes = [bunch(7.55, 4.5, 0.12, [3, 3, 2, 1]), bunch(8.95, 6.2, 0.11, [3, 2, 1]),
+          bunch(17.05, 4.3, 0.12, [3, 3, 2, 1]), bunch(19.15, 3.85, 0.11, [3, 2, 2, 1])]
 
 tex = r'''% Generated by make_banner.py; edit that file, not this one.
 \documentclass[tikz,border=0pt]{standalone}
-\usepackage[sfdefault,lf]{FiraSans}
+\usepackage[sfdefault]{inter}
 \usepackage[T1]{fontenc}
-\usetikzlibrary{shapes.misc}
-\definecolor{bgA}{HTML}{0F1C16}
-\definecolor{bgB}{HTML}{1B3027}
-\definecolor{muted}{HTML}{8FA59A}
-\definecolor{soft}{HTML}{D8E3DC}
-\definecolor{gold}{HTML}{F2C14E}
-\definecolor{leafA}{HTML}{3F8F4E}
-\definecolor{leafB}{HTML}{2F7440}
-\definecolor{vein}{HTML}{9CCB8F}
-\definecolor{grape}{HTML}{8E1F3A}
-\definecolor{grapeB}{HTML}{6E1830}
-\definecolor{stemc}{HTML}{8A7A55}
-\tikzset{
-  ray/.style={gold, line width=0.95pt, opacity=0.95},
-  blocked/.style={muted, line width=0.6pt, dash pattern=on 2pt off 1.6pt, opacity=0.85},
-  cross/.style={cross out, draw=soft, line width=0.8pt, minimum size=4.2pt, inner sep=0pt},
-  phone/.style={fill=soft}, lens/.style={fill=bgA},
-  railtick/.style={muted, line width=0.5pt},
-  leafvein/.style={vein, opacity=0.8}, stem/.style={stemc},
-  plane/.style={muted, line width=0.4pt, dash pattern=on 1pt off 2.5pt, opacity=0.7},
-  lab/.style={muted, font=\scriptsize, anchor=west},
-}
+\usepackage{microtype}
+\usetikzlibrary{fadings}
+\tikzfading[name=fade out, inner color=transparent!0, outer color=transparent!100]
+\definecolor{bg}{HTML}{F6F0FB}
+\definecolor{blobP}{HTML}{9B6CF0}
+\definecolor{blobG}{HTML}{7C9A55}
+\definecolor{blobO}{HTML}{D9A35A}
+\definecolor{blobK}{HTML}{E6A6D6}
+\definecolor{leafAL}{HTML}{7FC98F}\definecolor{leafAD}{HTML}{2E7D5B}
+\definecolor{leafBL}{HTML}{6DB88A}\definecolor{leafBD}{HTML}{236B4C}
+\definecolor{leafCL}{HTML}{B5D98A}\definecolor{leafCD}{HTML}{5E9E58}
+\definecolor{grape}{HTML}{6B3FA0}
+\definecolor{stemc}{HTML}{C9A46A}
+\definecolor{veinc}{HTML}{D8F0C8}
+\tikzset{stem/.style={stemc}, vein/.style={veinc, opacity=0.8}}
 \begin{document}
 \begin{tikzpicture}
-\shade[left color=bgA, right color=bgB, rounded corners=9pt] (0,0) rectangle (20,6.4);
-% planes
-\draw[plane] (0.75,''' + f'{FRUIT_Y:.2f}' + r''') -- (9.15,''' + f'{FRUIT_Y:.2f}' + r''');
-\draw[plane] (0.75,3.0) -- (9.15,3.0);
-\node[lab] at (9.2,''' + f'{FRUIT_Y:.2f}' + r''') {fruit};
-\node[lab] at (9.2,3.0) {leaves};
-\node[lab] at (9.2,''' + f'{RAIL_Y:.2f}' + r''') {rail};
-% rail
-\draw[soft, line width=1.6pt, line cap=round] (0.85,''' + f'{RAIL_Y - 0.3:.2f}' + r''') -- (8.7,''' + f'{RAIL_Y - 0.3:.2f}' + r''');
-''' + ticks + '\n' + '\n'.join(lines) + '\n' + r'''% fruit
-''' + bunch(TARGET[0], TARGET[1], 0.135, [4, 3, 2, 1], 'grape') + '\n' + bunch(2.05, FRUIT_Y + 0.05, 0.12, [3, 2, 1], 'grapeB') + '\n' + bunch(7.55, FRUIT_Y, 0.12, [3, 3, 2, 1], 'grapeB') + '\n' + r'''% leaves (drawn over the blocked rays)
-''' + '\n'.join(leaf_tikz(lf, 'leafA' if k % 2 else 'leafB') for k, lf in enumerate(leaves)) + '\n' + cams + '\n' + r'''% consensus note
-\draw[gold, line width=0.5pt] (''' + f'{TARGET[0] + 0.52:.2f},{TARGET[1] + 0.25:.2f}' + r''') -- (''' + f'{TARGET[0] + 1.05:.2f},{TARGET[1] + 0.72:.2f}' + r''') -- (''' + f'{TARGET[0] + 1.25:.2f},{TARGET[1] + 0.72:.2f}' + r''');
-\node[gold, font=\scriptsize, anchor=west, align=left] at (''' + f'{TARGET[0] + 1.25:.2f},{TARGET[1] + 0.72:.2f}' + r''') {''' + str(len(free)) + r''' views agree across ''' + str(span_mm) + r'''\,mm:\\the colour is kept};
-% divider and text
-\draw[muted, line width=0.4pt, opacity=0.6] (10.35,0.9) -- (10.35,5.5);
-\node[anchor=north west, muted, font=\scriptsize\bfseries, text width=8.9cm] at (10.8,5.85) {AMME5710 COMPUTER VISION\enspace\textbullet\enspace THE UNIVERSITY OF SYDNEY\enspace\textbullet\enspace 2026};
-\node[anchor=north west, soft, font=\fontsize{23}{26}\selectfont\bfseries, text width=8.9cm] at (10.75,5.3) {Smartphone-only\\occlusion removal};
-\node[anchor=north west, gold, font=\fontsize{13.5}{16}\selectfont, text width=8.9cm] at (10.8,3.32) {for counting grapes behind leaves};
-\node[anchor=north west, soft, font=\footnotesize, text width=8.6cm, align=left] at (10.8,2.55) {A laboratory proof of concept. A phone on a rail stands in for a vehicle on a vine row; the views are aligned on the fruit, and a fruit pixel is kept only where several views agree on its colour.};
-\node[anchor=south west, muted, font=\footnotesize, text width=8.9cm] at (10.8,0.5) {Has Salvesen\enspace\textbullet\enspace Finn Panko-Jones\enspace\textbullet\enspace Dinh Quang Huynh};
+\clip[rounded corners=9pt] (0,0) rectangle (''' + f'{W},{H}' + r''');
+\fill[bg] (0,0) rectangle (''' + f'{W},{H}' + r''');
+''' + '\n'.join(blobs) + '\n' + '\n'.join(grain) + '\n' + '\n'.join(ivy) + '\n' + '\n'.join(leaf(*l) for l in leaves) + '\n' + '\n'.join(grapes) + r'''
+\node[anchor=north west, font=\fontsize{17}{17}\selectfont\bfseries] at (0.55,6.0) {\textls[-30]{+\,amme5710}};
+\node[anchor=west, font=\fontsize{43}{40}\selectfont\bfseries, align=left] at (0.35,3.15) {\textls[-60]{estimating healthy grape}\\[-2pt]\textls[-60]{yields for vineyards}};
+\node[anchor=west, font=\fontsize{14.5}{16}\selectfont] at (0.5,1.35) {\textls[-30]{occlusion removal from a smartphone sweep, for counting grapes behind leaves}};
+\node[anchor=south west, font=\fontsize{10}{10}\selectfont\bfseries] at (0.55,0.35) {\textls[-20]{team c}};
+\node[anchor=south, font=\fontsize{10}{10}\selectfont\bfseries] at (10,0.35) {\textls[-20]{november 2026}};
+\node[anchor=south east, font=\fontsize{10}{10}\selectfont\bfseries] at (19.45,0.35) {\textls[-20]{dinh\enspace has\enspace finn}};
 \end{tikzpicture}
 \end{document}
 '''
 (HERE / 'banner.tex').write_text(tex)
-print(f'seed {seed}: unblocked views {[i + 1 for i in free]} ({span_mm} mm apart); {len(leaves)} leaves')
+print('banner.tex written')
