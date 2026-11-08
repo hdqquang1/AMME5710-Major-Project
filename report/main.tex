@@ -1,0 +1,83 @@
+% CVPR 2026 Paper Template; see https://github.com/cvpr-org/author-kit
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+%%%%%%%%% PAPER TYPE  - PLEASE UPDATE FOR FINAL VERSION
+% \usepackage{cvpr}              % To produce the CAMERA-READY version
+% \usepackage[review]{cvpr}      % To produce the REVIEW version
+\usepackage[pagenumbers]{cvpr} % To force page numbers, e.g. for an arXiv version
+
+% Import additional packages in the preamble file, before hyperref
+\input{preamble}
+
+% It is strongly recommended to use hyperref, especially for the review version.
+% hyperref with option pagebackref eases the reviewers' job.
+% Please disable hyperref *only* if you encounter grave issues, 
+% e.g. with the file validation for the camera-ready version.
+%
+% If you comment hyperref and then uncomment it, you should delete *.aux before re-running LaTeX.
+% (Or just hit 'q' on the first LaTeX run, let it finish, and you should be clear).
+\definecolor{cvprblue}{rgb}{0.21,0.49,0.74}
+\usepackage[pagebackref,breaklinks,colorlinks,allcolors=cvprblue]{hyperref}
+
+%%%%%%%%% PAPER ID  - PLEASE UPDATE
+\def\paperID{*****} % *** Enter the Paper ID here
+\def\confName{CVPR}
+\def\confYear{2026}
+
+%%%%%%%%% TITLE - PLEASE UPDATE
+\title{Smartphone-Only Occlusion Removal for Estimating Healthy Grape Yield in Vineyards}
+
+%%%%%%%%% AUTHORS - PLEASE UPDATE
+% \author{First Author\\
+% Institution1\\
+% Institution1 address\\
+% {\tt\small firstauthor@i1.org}
+% % For a paper whose authors are all at the same institution,
+% % omit the following lines up until the closing ``}''.
+% % Additional authors and addresses can be added with ``\and'',
+% % just like the second author.
+% % To save space, use either the email address or home page, not both
+% \and
+% Second Author\\
+% Institution2\\
+% First line of institution2 address\\
+% {\tt\small secondauthor@i2.org}
+% }
+\author{
+Has Salvesen \qquad Finn Panko-Jones \qquad Dinh Quang Huynh\\
+{\tt\small \{hsal9391,fpan2183,dhuy9648\}@uni.sydney.edu.au}
+}
+
+\begin{document}
+\maketitle
+\input{sec/0_abstract}    
+\input{sec/1_introduction}
+\input{sec/2_related_work}
+\input{sec/3_methodology}
+\input{sec/4_experiments}
+\input{sec/5_results}
+\input{sec/6_discussions}
+\input{sec/7_conclusions}
+{
+    \small
+    \bibliographystyle{ieeenat_fullname}
+    \bibliography{main}
+}
+\newpage
+\section*{Statement of contributions}
+% Each author checks their line before signing. Categories follow the handout:
+% literature review, implementation, benchmark data, writing.
+\noindent\textbf{Finn Panko-Jones.} Implementation: the rail rig and the four captures; the depth-shift synthetic aperture prototype; the final pipeline (fruit-only registration, joint pose solve and consensus fusion); the baselines, ablations and evaluation scripts. Writing: Secs.~\ref{sec:method} and 5.\\[2pt]
+\textbf{Dinh Quang Huynh.} Implementation: SAM~3 fruit and foliage segmentation; red and green separation; the COLMAP background reconstruction. Benchmark data: the leaf-free photographs and the 25 grape labels. Writing: Sec.~\ref{sec:exp} and the figures.\\[2pt]
+\textbf{Has Salvesen.} Literature review and Sec.~2. Implementation: a colour-free occlusion-aware synthetic aperture variant with its synthetic benchmark; the code repository and its documentation. Writing: abstract, introduction, discussion and conclusion; report integration and editing.\\[6pt]
+\noindent Signed, 8 November 2026:\\[14pt]
+\underline{\hspace{0.26\linewidth}}\quad\underline{\hspace{0.26\linewidth}}\quad\underline{\hspace{0.26\linewidth}}\\
+\hspace{0.03\linewidth}Finn Panko-Jones\hspace{0.115\linewidth}Dinh Quang Huynh\hspace{0.12\linewidth}Has Salvesen
+
+\section*{Acknowledgement of AI assistance}
+ChatGPT (OpenAI) and Claude (Anthropic, including Claude Code) were used. ChatGPT assisted with structuring and drafting the LaTeX report, clarifying explanations of the method and checking citation and formatting consistency. Claude assisted with searching and summarising the literature, with writing and debugging code for the synthetic benchmark and the repository documentation, and with editing the text for clarity and consistency. All captures, experiments, measurements, figures and conclusions were produced, run and verified by the authors, who are responsible for the content.
+% WARNING: do not forget to delete the supplementary pages from your submission 
+% \input{sec/X_suppl}
+
+\end{document}
