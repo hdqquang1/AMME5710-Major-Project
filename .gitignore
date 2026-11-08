@@ -1,3 +1,18 @@
 __pycache__/
 .vscode/
+.venv/
+.DS_Store
+# photographs, masks and raw phone files: hosted on OneDrive, see Captures/README.md
 data/
+raw/
+# third-party checkouts
+sam3/
+archive/
+# what the scripts write, except the small result files and the figures the READMEs show
+Out/**/*.png
+Out/**/*.jpg
+Out/**/*.npz
+Out/**/*.npy
+!Out/**/README.md
+has_sai/data/
+has_sai/results/real/
