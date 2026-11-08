@@ -1,0 +1,19 @@
+{
+  "stage_seconds": {
+    "load images and masks": 5.851355314254761,
+    "SIFT and pairwise RANSAC": 10.212939262390137,
+    "joint pose solve and reference": 0.23838543891906738,
+    "fusion": 208.93333172798157,
+    "GrapeSAM count (one image)": 0.6336560249328613,
+    "SAM 3 masks (one view, fruit + foliage)": 1.5177552700042725
+  },
+  "views": 28,
+  "processing_size": [
+    2419,
+    3226
+  ],
+  "gpu": "NVIDIA RTX 2000 Ada Generation Laptop GPU",
+  "cpu_threads": 28,
+  "pairs_ok": 84,
+  "pairs": 102
+}

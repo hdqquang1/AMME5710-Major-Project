@@ -1,0 +1,133 @@
+diff --git a/sam3/model/edt.py b/sam3/model/edt.py
+index c4d6e7c..e1121e5 100644
+--- a/sam3/model/edt.py
++++ b/sam3/model/edt.py
+@@ -5,8 +5,14 @@
+ """Triton kernel for euclidean distance transform (EDT)"""
+ 
+ import torch
+-import triton
+-import triton.language as tl
++
++try:
++    import triton
++    import triton.language as tl
++
++    HAS_TRITON = True
++except ImportError:  # e.g. Windows, where triton is not available
++    HAS_TRITON = False
+ 
+ """
+ Disclaimer: This implementation is not meant to be extremely efficient. A CUDA kernel would likely be more efficient.
+@@ -52,8 +58,23 @@ Overall, despite being quite naive, this implementation is roughly 5.5x faster t
+ """
+ 
+ 
+-@triton.jit
+-def edt_kernel(inputs_ptr, outputs_ptr, v, z, height, width, horizontal: tl.constexpr):
++def _jit(fn):
++    return triton.jit(fn) if HAS_TRITON else fn
++
++
++def _edt_cpu(data: torch.Tensor):
++    import cv2
++    import numpy as np
++
++    masks = data.detach().cpu().numpy().astype(np.uint8)
++    out = np.stack(
++        [cv2.distanceTransform(m, cv2.DIST_L2, 0) for m in masks]
++    ).astype(np.float32)
++    return torch.from_numpy(out).to(data.device)
++
++
++@_jit
++def edt_kernel(inputs_ptr, outputs_ptr, v, z, height, width, horizontal: "tl.constexpr"):
+     # This is a somewhat verbatim implementation of the efficient 1D EDT algorithm described above
+     # It can be applied horizontally or vertically depending if we're doing the first or second stage.
+     # It's parallelized across batch+row (or batch+col if horizontal=False)
+@@ -128,7 +149,8 @@ def edt_triton(data: torch.Tensor):
+         It should be equivalent to a batched version of cv2.distanceTransform(input, cv2.DIST_L2, 0)
+     """
+     assert data.dim() == 3
+-    assert data.is_cuda
++    if not HAS_TRITON or not data.is_cuda:
++        return _edt_cpu(data)
+     B, H, W = data.shape
+     data = data.contiguous()
+ 
+diff --git a/sam3/model/sam3_image_processor.py b/sam3/model/sam3_image_processor.py
+index f8439f5..78548ca 100644
+--- a/sam3/model/sam3_image_processor.py
++++ b/sam3/model/sam3_image_processor.py
+@@ -209,11 +209,21 @@ class Sam3Processor:
+         scale_fct = torch.tensor([img_w, img_h, img_w, img_h]).to(self.device)
+         boxes = boxes * scale_fct[None, :]
+ 
+-        out_masks = interpolate(
+-            out_masks.unsqueeze(1),
+-            (img_h, img_w),
+-            mode="bilinear",
+-            align_corners=False,
++        # chunked + fp16 so many detections on a full-res image don't OOM an 8 GB GPU
++        out_masks = torch.cat(
++            [
++                interpolate(
++                    m.unsqueeze(1),
++                    (img_h, img_w),
++                    mode="bilinear",
++                    align_corners=False,
++                )
++                .sigmoid()
++                .half()
++                for m in out_masks.split(8)
++            ]
++        ) if len(out_masks) else interpolate(
++            out_masks.unsqueeze(1), (img_h, img_w), mode="bilinear", align_corners=False
+         ).sigmoid()
+ 
+         state["masks_logits"] = out_masks
+diff --git a/sam3/model_builder.py b/sam3/model_builder.py
+index 64c6308..8c10283 100644
+--- a/sam3/model_builder.py
++++ b/sam3/model_builder.py
+@@ -5,7 +5,6 @@
+ import os
+ from typing import Optional
+ 
+-import pkg_resources
+ import torch
+ import torch.nn as nn
+ from huggingface_hub import hf_hub_download
+@@ -596,9 +595,7 @@ def build_sam3_image_model(
+         A SAM3 image model
+     """
+     if bpe_path is None:
+-        bpe_path = pkg_resources.resource_filename(
+-            "sam3", "assets/bpe_simple_vocab_16e6.txt.gz"
+-        )
++        bpe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "bpe_simple_vocab_16e6.txt.gz")
+ 
+     # Create visual components
+     compile_mode = "default" if compile else None
+@@ -695,9 +692,7 @@ def build_sam3_video_model(
+         Sam3VideoInferenceWithInstanceInteractivity: The instantiated dense tracking model
+     """
+     if bpe_path is None:
+-        bpe_path = pkg_resources.resource_filename(
+-            "sam3", "assets/bpe_simple_vocab_16e6.txt.gz"
+-        )
++        bpe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "bpe_simple_vocab_16e6.txt.gz")
+ 
+     # Build Tracker module
+     tracker = build_tracker(apply_temporal_disambiguation=apply_temporal_disambiguation)
+@@ -1106,9 +1101,7 @@ def build_sam3_multiplex_video_predictor(
+         Sam3MultiplexVideoPredictor: The fully-initialized predictor
+     """
+     if bpe_path is None:
+-        bpe_path = pkg_resources.resource_filename(
+-            "sam3", "assets/bpe_simple_vocab_16e6.txt.gz"
+-        )
++        bpe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "bpe_simple_vocab_16e6.txt.gz")
+ 
+     from sam3.model.sam3_multiplex_base import Sam3MultiplexPredictorWrapper
+     from sam3.model.sam3_multiplex_detector import Sam3MultiplexDetector

@@ -1,0 +1,17 @@
+=== a2
+b5 fused m3_b80
+Traceback (most recent call last):
+  File "N:\Projects\Major Project\run_ablations.py", line 819, in <module>
+    steps[arg]()
+  File "N:\Projects\Major Project\run_ablations.py", line 419, in a2
+    run_variant(root / tag, b, images, A_, T_, P, ref, {"group": g, "variant": var, "pose": kind}, **kw)
+  File "N:\Projects\Major Project\run_ablations.py", line 128, in run_variant
+    r = fuse_ours(images, allowed, targets, poses, ref, **kw)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "N:\Projects\Major Project\run_ablations.py", line 119, in fuse_ours
+    result = gr.fuse_views(images, allowed, targets, poses, ref, (0, 0, w, h), 192, min_views, 20,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "N:\Projects\Major Project\grape_restore_autoref.py", line 503, in fuse_views
+    cv2.remap(targets[i].astype(np.float32), mx, my, cv2.INTER_LINEAR)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+numpy._core._exceptions._ArrayMemoryError: Unable to allocate 29.8 MiB for an array with shape (3226, 2419) and data type float32

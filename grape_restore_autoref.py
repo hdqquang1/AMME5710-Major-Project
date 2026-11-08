@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Measured multi-view restoration of the red/purple grapes in the Drive scene.
+"""Measured multi-view restoration of grapes behind foliage on a camera rail.
 
-The target colour/ROI is an explicit scene prior, not a trained grape detector.
+Fruit comes from colour thresholds (red, green or both), SAM 3, or saved masks.
 Only observed source colours are exported; invisible surfaces are never filled.
 """
 
@@ -16,7 +16,13 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from grape_reconstruct import load_sequence
+from grape_io import load_sequence
+from grape_segment import (
+    COLOUR_THRESHOLDS,
+    colour_mask,
+    load_grape_masks,
+    segment_folder_sam3,
+)
 
 
 @dataclass
@@ -30,75 +36,12 @@ class MatchEdge:
     summary: dict
 
 
-def roi_mask(shape, box):
-    if len(box) != 4 or not (0 <= box[0] < box[2] <= 1 and 0 <= box[1] < box[3] <= 1):
-        raise ValueError("ROI must contain x0 y0 x1 y1 fractions within 0..1")
-    h, w = shape
-    result = np.zeros(shape, np.uint8)
-    result[
-        round(box[1] * h) : round(box[3] * h), round(box[0] * w) : round(box[2] * w)
-    ] = 255
-    return result
-
-
-def target_mask(image, box):
-    """Red/purple candidate support; the supplied ROI excludes printed red tape."""
-    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-    b, g, r = cv2.split(image.astype(np.float32))
-    seed = (lab[:, :, 1] >= 137) & (r > g * 1.12) & (r > b * 1.05) & (r > 25)
-    mask = np.uint8(seed) * 255
-    mask &= roi_mask(mask.shape, box)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
-    # Include small enclosed highlights in candidate masks. No image colours
-    # are generated; these are not separate berry-instance labels.
-    holes = cv2.bitwise_not(mask)
-    count, labels, stats, _ = cv2.connectedComponentsWithStats(holes, 8)
-    for k in range(1, count):
-        x, y, w, h, area = stats[k]
-        if (
-            area <= 49
-            and x > 0
-            and y > 0
-            and x + w < mask.shape[1]
-            and y + h < mask.shape[0]
-        ):
-            mask[labels == k] = 255
-    mask &= roi_mask(mask.shape, box)
-    return mask > 0
-
-
 def green_occluder_mask(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     green = cv2.inRange(
         hsv, np.array([25, 30, 18], np.uint8), np.array([105, 255, 255], np.uint8)
     )
     return cv2.dilate(green, np.ones((5, 5), np.uint8)) > 0
-
-
-def load_target_masks(folder, names, original_size, shape):
-    """Reviewed/SAM target masks: white includes grapes, black excludes them."""
-    output = []
-    if len({str(Path(n).with_suffix(".png")) for n in names}) != len(names):
-        raise ValueError("Input names collide in the target-mask folder")
-    for name in names:
-        path = Path(folder) / Path(name).with_suffix(".png")
-        if not path.is_file():
-            raise ValueError(f"Missing target mask: {path}")
-        with Image.open(path) as image:
-            if image.size != original_size:
-                raise ValueError(
-                    f"Target mask must match oriented original dimensions: {path}"
-                )
-            mask = np.asarray(image.convert("L")) >= 128
-        output.append(
-            cv2.resize(
-                mask.astype(np.float32),
-                (shape[1], shape[0]),
-                interpolation=cv2.INTER_AREA,
-            )
-            > 0.999
-        )
-    return output
 
 
 def fit_pair(i, j, features, threshold=1.5, min_inliers=12):
@@ -425,7 +368,8 @@ def restoration_bounds(images, poses, union=True):
 
 
 def fuse_tile(
-    colours, valid, targets, indices, reference, min_views, spacing, min_baseline
+    colours, valid, targets, indices, reference, min_views, spacing, min_baseline,
+    rms=30, select="best",
 ):
     """Robust colour support, followed by selection of an observed source pixel."""
     n, h, w = valid.shape
@@ -440,7 +384,7 @@ def fuse_tile(
         )
     median = np.nan_to_num(median)
     distance = np.sqrt(np.mean((colours.astype(np.float32) - median) ** 2, axis=-1))
-    inliers = eligible & (distance <= 30)
+    inliers = eligible & (distance <= rms)
     support = inliers.sum(axis=0).astype(np.uint16)
     span = np.max(np.where(inliers, indices[:, None, None], -np.inf), axis=0) - np.min(
         np.where(inliers, indices[:, None, None], np.inf), axis=0
@@ -451,13 +395,13 @@ def fuse_tile(
     costs = []
     for k in range(n):
         errors = cv2.GaussianBlur(
-            np.where(eligible[k], distance[k], 30).astype(np.float32), (5, 5), 0.9
+            np.where(eligible[k], distance[k], min(rms, 255)).astype(np.float32), (5, 5), 0.9
         )
         boundary = np.minimum(
             cv2.distanceTransform(inliers[k].astype(np.uint8), cv2.DIST_L2, 3), 4
         )
         cost = (
-            errors / 30
+            errors / min(rms, 255)
             + 0.15 / (1 + boundary)
             + 0.025 * abs(int(indices[k]) - reference) / max(1, len(indices) - 1)
         )
@@ -465,6 +409,11 @@ def fuse_tile(
     choice = np.argmin(costs, axis=0)
     yy, xx = np.mgrid[:h, :w]
     selected = colours[choice, yy, xx].copy()
+    if select == "median":  # Ablation only: blends colours instead of copying one view.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            blend = np.nanmedian(np.where(inliers[..., None], colours.astype(np.float32), np.nan), axis=0)
+        selected = np.uint8(np.clip(np.nan_to_num(blend), 0, 255))
     observed = (support >= min_views) & (span >= min_baseline)
     disagreement = (distance * inliers).sum(axis=0) / np.maximum(support, 1)
     reliable = observed & (disagreement <= 18)
@@ -493,6 +442,8 @@ def fuse_views(
     spacing=20,
     min_baseline=40,
     progress=None,
+    rms=30,
+    select="best",
 ):
     ox, oy, x1, y1 = bounds
     h, w = y1 - oy, x1 - ox
@@ -531,6 +482,9 @@ def fuse_views(
             for i, inv, source_clear in zip(indices, inverse, clear_sources):
                 mx = (inv[0, 0] * xx + inv[0, 1] * yy + inv[0, 2]).astype(np.float32)
                 my = (inv[1, 0] * xx + inv[1, 1] * yy + inv[1, 2]).astype(np.float32)
+                if inv[2, 0] or inv[2, 1]:  # Projective pose (homography ablation).
+                    wz = (inv[2, 0] * xx + inv[2, 1] * yy + inv[2, 2]).astype(np.float32)
+                    mx, my = mx / wz, my / wz
                 colours.append(cv2.remap(images[i], mx, my, cv2.INTER_LINEAR))
                 v = (
                     (
@@ -568,6 +522,8 @@ def fuse_views(
                 min_views,
                 spacing,
                 min_baseline,
+                rms,
+                select,
             )
             crop = np.s_[y - by : ey - by, x - bx : ex - bx]
             dest = np.s_[y:ey, x:ex]
@@ -671,7 +627,7 @@ def export_result(out, result, reference, bounds, metadata):
         supported_target_pixels=int(mask.sum()),
         reliable_target_pixels=int(result["reliable"].sum()),
         canvas_origin_reference_processing_px=list(bounds[:2]),
-        note="Target pixels are red/purple candidates supported by multiple aligned views, not verified grape instances or berry counts.",
+        note="Target pixels are fruit candidates supported by multiple aligned views, not verified grape instances or berry counts.",
     )
     (out / "diagnostics.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
@@ -717,12 +673,29 @@ def main(argv=None):
     )
     p.add_argument("--canvas", choices=["reference", "union"], default="reference")
     p.add_argument(
-        "--masks", type=Path, help="Optional original-size white=occluder masks"
+        "--segment",
+        choices=["colour", "sam3"],
+        default="colour",
+        help="How to find fruit in each view; ignored when --grape-masks is given",
     )
     p.add_argument(
-        "--target-masks",
+        "--colour",
+        choices=["red", "green", "both"],
+        default="red",
+        help="Fruit colour for --segment colour; choose per capture",
+    )
+    p.add_argument(
+        "--fruit-prompt", default="grape", help="SAM 3 text prompt for --segment sam3"
+    )
+    p.add_argument(
+        "--grape-masks",
         type=Path,
-        help="Optional original-size white=grape masks, replacing the red/purple colour prior and ROI",
+        help="Saved original-size white=grape masks; overrides --segment",
+    )
+    p.add_argument(
+        "--foliage-masks",
+        type=Path,
+        help="Saved original-size white=foliage masks, named <stem>.png or <stem>_mask.png",
     )
     args = p.parse_args(argv)
     if not np.isfinite(
@@ -759,9 +732,16 @@ def main(argv=None):
     ):
         p.error("Keep results outside the input image folder")
     progress = lambda value: print(value, flush=True)
+    grape_dir, foliage_dir = args.grape_masks, args.foliage_masks
+    if grape_dir is None and args.segment == "sam3":
+        progress("Segmenting every view with SAM 3...")
+        grape_dir, generated = segment_folder_sam3(
+            args.images, args.out, args.fruit_prompt, foliage=foliage_dir is None
+        )
+        foliage_dir = foliage_dir or generated
     progress("Loading original images (EXIF orientation applied)...")
     names, images, allowed, size = load_sequence(
-        args.images, args.scale, args.masks, mask_dilate=0
+        args.images, args.scale, foliage_dir, mask_dilate=0
     )
     if args.min_views > len(images):
         p.error("Minimum support exceeds image count")
@@ -769,9 +749,9 @@ def main(argv=None):
     if reference is not None and not 0 <= reference < len(images):
         p.error("Reference outside image sequence")
     targets = (
-        load_target_masks(args.target_masks, names, size, images[0].shape[:2])
-        if args.target_masks
-        else [target_mask(im, args.target_roi) for im in images]
+        load_grape_masks(grape_dir, names, size, images[0].shape[:2])
+        if grape_dir
+        else [colour_mask(im, args.target_roi, args.colour) for im in images]
     )
     targets = [t & v for t, v in zip(targets, allowed)]
     edges, summaries = build_edges(
@@ -822,6 +802,8 @@ def main(argv=None):
     ref_canvas = np.zeros((y1 - oy, x1 - ox, 3), np.uint8)
     h, w = images[0].shape[:2]
     ref_canvas[-oy : h - oy, -ox : w - ox] = images[reference]
+    ref_fruit = np.zeros((y1 - oy, x1 - ox), np.uint8)
+    ref_fruit[-oy : h - oy, -ox : w - ox] = np.uint8(targets[reference]) * 255
     metadata = {
         "method": "target-feature pose graph and observed-source selection",
         "parameters": {
@@ -831,16 +813,23 @@ def main(argv=None):
         "original_size": list(size),
         "processing_size": [w, h],
         "reference_1based": reference + 1,
-        "target_prior": "external target masks"
-        if args.target_masks
-        else "red/purple colour with source ROI",
+        "segmentation": {
+            "fruit": "saved masks"
+            if args.grape_masks
+            else ("sam3" if grape_dir else f"colour: {args.colour}"),
+            "fruit_prompt": args.fruit_prompt
+            if grape_dir and not args.grape_masks
+            else None,
+            "foliage": str(foliage_dir) if foliage_dir else None,
+            "colour_thresholds": None if grape_dir else COLOUR_THRESHOLDS,
+        },
         "registration": registration,
         "pair_diagnostics": summaries,
         "source_to_reference_matrices": [
             m.tolist() if m is not None else None for m in poses
         ],
         "limitations": [
-            "Target masks or red/purple colour and ROI are scene-specific priors and need review.",
+            "Fruit masks, colour thresholds and the ROI are scene-specific priors and need review.",
             "The 2D target model approximates a range of grape depths; alignment can still be imperfect.",
             "Neighbouring-view graph consistency does not establish true camera calibration or metric depth.",
             "A surface must have sufficient clear observations; unseen surfaces and backs of berries remain unknown.",
@@ -848,6 +837,7 @@ def main(argv=None):
         ],
     }
     export_result(args.out, result, ref_canvas, bounds, metadata)
+    cv2.imwrite(str(args.out / "reference_fruit_mask.png"), ref_fruit)
     progress(
         f"Saved {args.out}; supported candidate pixels: {int(result['observed'].sum())}"
     )

@@ -1,0 +1,33 @@
+{
+  "grape_roi_pixels": 50991,
+  "supported_grape_pixels": 44546,
+  "supported_grape_fraction": 0.8736051460061579,
+  "less_ambiguous_grape_fraction": 0.8605636288756839,
+  "mask_iou": 0.7155983935742972,
+  "mask_precision": 0.7982438849565451,
+  "mask_recall": 0.8736051460061579,
+  "mae_on_supported_grapes": 20.70669270716413,
+  "psnr_db_on_supported_grapes": 18.298390989728745,
+  "baseline_mae_on_same_supported_grapes": 31.821023960250827,
+  "warning": "Coverage and fidelity are separate; missing pixels are never counted as successful recovery.",
+  "registration": {
+    "matches": 138,
+    "inliers": 61,
+    "median_residual_px": 1.6994237545368678,
+    "scale": 0.8042986062397081,
+    "rotation_deg": -0.24301939966492955
+  },
+  "truth_to_result_matrix": [
+    [
+      0.8042913714936488,
+      0.0034114131972585887,
+      256.7397480424283
+    ],
+    [
+      -0.0034114131972585887,
+      0.8042913714936488,
+      -19.346168281167653
+    ]
+  ],
+  "truth": "results\\refactor_check\\truth\\t1.jpg"
+}

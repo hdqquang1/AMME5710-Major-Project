@@ -1,0 +1,11 @@
+=== a1
+C:\Users\quang\miniconda3\envs\uni\Lib\site-packages\torch\jit\_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+C:\Users\quang\miniconda3\envs\uni\Lib\site-packages\timm\models\layers\__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+wrote results\ablation\a1.csv (10 rows)
+wrote results\ablation\a1.csv (20 rows)
+wrote results\ablation\a1.csv (30 rows)
+wrote results\ablation\a1.csv (40 rows)
+=== a2
+  b5 min views (B=0): m=1 -> recall 0.933 prec 0.630 F1 0.77
