@@ -1,0 +1,15 @@
+# One environment for the restoration, baseline and benchmark scripts.
+# Tested with Python 3.13, numpy 2.1, opencv-python 4.10, pillow 11, matplotlib 3.9.
+numpy>=2.0
+opencv-python>=4.10
+pillow>=10
+matplotlib>=3.9
+scikit-image>=0.24
+# HEIC to PNG conversion of the iPhone photos (App/Capturing/convert_heic.py)
+pillow-heif>=0.18
+# SAM 3 masks (App/Processing/I-Segmentation) and GrapeSAM need PyTorch and a CUDA GPU.
+# Install torch for your CUDA version from https://pytorch.org/get-started/locally/ and then
+#   git clone https://github.com/facebookresearch/sam3   (follow its README for the checkpoint)
+# GrapeSAM weights come with the ViViD-5K release (arXiv:2605.24353).
+# The COLMAP baseline (App/Processing/IV-Depth_Baselines/COLMAP) needs the COLMAP binary
+# with CUDA: https://colmap.github.io/ ; the point-cloud viewer there also imports open3d.
