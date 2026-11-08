@@ -121,28 +121,34 @@ tex = r'''\documentclass[tikz,border=0pt]{standalone}
 \end{scope}
 \draw[black!55, line width=0.5pt] (''' + f'{HX0},{HY0}) rectangle ({HX1},{HY1}' + r''');
 \draw[black!35, line width=0.3pt] (''' + f'{X0},{Y1}) -- ({X1},{Y1}) -- ({X1},{Y0}) ({X1},{Y1}) -- ({X1 + DX},{Y1 + DY})' + r''';
-\fill[railc] (0.2,0.35) -- (5.9,0.35) -- (6.1,0.72) -- (0.4,0.72) -- cycle;
-\draw[steel, line width=0.6pt] (0.3,0.47) -- (5.97,0.47) (0.37,0.6) -- (6.04,0.6);
-\foreach \x in {0.7,1.1,...,5.6} \draw[black!30, line width=0.25pt] (\x,0.4) -- (\x+0.04,0.44);
-\fill[black!55] (2.45,0.58) rectangle (2.75,0.72);
-\fill[black!70] (2.57,0.72) rectangle (2.63,2.45);
-\fill[black!85, rounded corners=1.5pt] (2.42,2.45) rectangle (2.78,3.15);
-\fill[black!60, rounded corners=1pt] (2.46,2.92) rectangle (2.6,3.1);
-\fill[black!20] (2.505,3.05) circle (0.025) (2.555,2.97) circle (0.025) (2.505,2.97) circle (0.02);
-\draw[axis, densely dashed, line width=0.5pt] (2.53,3.0) -- (2.75,3.12);
-\fill[lit, opacity=0.4] (4.55,2.55) -- (''' + f'{HX0 + 1.0},{HY1}) -- ({HX1},{HY0 + 0.1}' + r''') -- cycle;
-\fill[black!70] (5.5,0.15) ellipse (0.32 and 0.08);
-\draw[black!75, line width=1.1pt] (5.5,0.18) -- (5.75,1.55) -- (4.95,2.55);
-\fill[black!80] (4.5,2.5) -- (4.85,2.85) -- (5.1,2.45) -- (4.8,2.25) -- cycle;
-\fill[lit] (4.6,2.46) circle (0.07);
-\draw[lead] (2.75,3.12) -- (7.05,5.38); \node[lab, text=axis] at (7.1,5.38) {optical axis};
+% rail: a drawer slide on a board standing upright on the table, well in front of the box
+\fill[railc] (0.3,0.2) rectangle (5.9,1.5);
+\fill[white!70!railc] (0.3,1.5) -- (5.9,1.5) -- (6.02,1.6) -- (0.42,1.6) -- cycle;
+\fill[black!25!railc] (5.9,0.2) -- (6.02,0.3) -- (6.02,1.6) -- (5.9,1.5) -- cycle;
+\fill[steel] (0.45,1.12) rectangle (5.75,1.36);
+\draw[black!45, line width=0.3pt] (0.45,1.24) -- (5.75,1.24);
+\foreach \x in {0.8,1.2,...,5.6} \fill[black!35] (\x,1.18) circle (0.012);
+\fill[black!65] (2.3,1.1) rectangle (2.9,1.42);
+% phone on a short holder on the carriage, camera facing the box
+\fill[black!55] (2.47,1.6) rectangle (2.73,1.72);
+\fill[black!85, rounded corners=1.5pt] (2.42,1.72) rectangle (2.78,2.42);
+\fill[black!60, rounded corners=1pt] (2.46,2.19) rectangle (2.6,2.37);
+\fill[black!20] (2.505,2.32) circle (0.025) (2.555,2.24) circle (0.025) (2.505,2.24) circle (0.02);
+\draw[axis, densely dashed, line width=0.5pt] (2.53,2.27) -- (2.9,2.5);
+% lamp at the middle of the rail, on the viewer's side, shining straight into the box
+\fill[lit, opacity=0.45] (3.2,1.95) -- (''' + f'{HX0 + 0.6},{HY1 - 0.1}) -- ({HX1 - 0.3},{HY1 - 0.1}' + r''') -- cycle;
+\fill[black!70] (3.35,0.08) ellipse (0.3 and 0.07);
+\draw[black!75, line width=1.1pt] (3.35,0.1) -- (3.55,1.0) -- (3.25,1.8);
+\fill[black!80] (3.0,1.78) -- (3.25,2.12) -- (3.5,1.9) -- (3.3,1.62) -- cycle;
+\fill[lit] (3.18,1.95) circle (0.07);
+\draw[lead] (2.9,2.5) -- (7.05,5.38); \node[lab, text=axis] at (7.1,5.38) {optical axis};
 \draw[lead] ''' + f'({(sx0 + sx1) / 2 + 0.6:.2f},{sy + 0.01:.2f})' + r''' -- (7.05,4.69); \node[lab] at (7.1,4.69) {slit, 2\,cm from each side};
 \draw[lead] (''' + f'{X1 + 0.5},{Y1 - 0.4}' + r''') -- (7.05,4.00); \node[lab] at (7.1,4.00) {closed cardboard box};
 \draw[lead] (''' + f'{HX1},{HY1 - 0.15}' + r''') -- (7.05,3.31); \node[lab] at (7.1,3.31) {viewing hole, 3\,cm border};
 \draw[lead] (''' + f'{HX1 - 0.3},{HY1 - 0.35}' + r''') -- (7.05,2.62); \node[lab] at (7.1,2.62) {grapes back, vines front};
-\draw[lead] (4.85,2.75) -- (7.05,1.93); \node[lab] at (7.1,1.93) {lamp lighting the scene};
-\draw[lead] (2.78,2.75) -- (7.05,1.24); \node[lab] at (7.1,1.24) {iPhone, portrait, on a stand};
-\draw[lead] (6.0,0.55) -- (7.05,0.55); \node[lab] at (7.1,0.55) {rail, 20\,mm stops};
+\draw[lead] (3.45,1.95) -- (7.05,1.93); \node[lab] at (7.1,1.93) {lamp at the middle of the rail};
+\draw[lead] (2.78,2.1) -- (7.05,1.24); \node[lab] at (7.1,1.24) {iPhone, portrait, on the rail};
+\draw[lead] (5.9,0.8) -- (7.05,0.55); \node[lab] at (7.1,0.55) {upright rail, 20\,mm stops};
 \end{scope}
 \end{tikzpicture}
 \end{document}
