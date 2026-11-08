@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Runs every stage whose inputs are present and prints SKIPPED with the reason for the rest.
-# Run from anywhere: ./reproduce.sh            (all stages)
-#                    ./reproduce.sh --synthetic (only the has_sai synthetic benchmark)
+# Reproduce what this machine can. Run from anywhere.
+#   ./reproduce.sh              check the report's tables against results/ and rebuild the ablation
+#                               tables and plots from the committed results (no data, no GPU)
+#   ./reproduce.sh --synthetic  also run has_sai's 44-scene synthetic benchmark (about 20 min on 3 cores)
+#   ./reproduce.sh --full       also re-run the whole study: needs data/ (see data/README.md), the
+#                               submodules and weights (third_party/README.md) and a CUDA GPU
 set -e
 cd "$(dirname "$0")"
 if [ ! -x .venv/bin/python ]; then
@@ -9,49 +12,41 @@ if [ ! -x .venv/bin/python ]; then
   .venv/bin/pip install --quiet -r requirements.txt
 fi
 P="$PWD/.venv/bin/python"
-export OPENCV_FOR_THREADS_NUM=1   # one pair decision can flip between runs when SIFT ties are threaded
 
-if [ "${1:-}" = "--synthetic" ]; then
-  echo "== has_sai synthetic benchmark (renders 44 scenes; about 20 min on 3 cores)"
-  "$P" has_sai/run_synthetic_benchmark.py
-  exit 0
-fi
+echo "== 1. The report's Tables 1-3 and quoted numbers against results/"
+"$P" tools/check_report_numbers.py
 
-CAPS="2cm_74cm_3branches 2cm_74cm_4branches 2cm_74cm_5branches 2cm_74cm_6branches"
-echo "== I. SAM 3 masks"
-if "$P" -c "import torch, sam3" 2>/dev/null; then
-  for c in $CAPS; do
-    if [ -d "data/$c/images" ] && [ ! -d "data/$c/grape_masks" ]; then
-      "$P" App/Processing/I-Segmentation/make_masks.py --input "data/$c/images" --output "data/$c" --overlay --grape-masks
-    fi
-  done
-else
-  echo "SKIPPED: PyTorch with CUDA and the sam3 package are not installed (see App/Processing/I-Segmentation/README.md)"
-fi
+echo "== 2. results/ablation/assets rebuilt from the committed per-run results"
+"$P" make_ablation_assets.py
+git diff --stat -- results/ablation/assets 2>/dev/null | tail -n 1 || true
 
-echo "== II. Restoration (the method), 28 views at scale 0.8, about 4 min per capture"
-for c in $CAPS; do
-  if [ ! -d "data/$c/images" ]; then
-    echo "SKIPPED $c: data/$c/images is missing (see Captures/README.md)"
-  elif [ ! -d "data/$c/grape_masks" ]; then
-    echo "SKIPPED $c: data/$c/grape_masks is missing; without SAM 3 masks the script would run the colour-rule ablation, not the method"
-  else
-    "$P" App/Processing/II-Restoration/grape_restore_autoref.py --images "data/$c/images" \
-        --target-masks "data/$c/grape_masks" --scale 0.8 --spacing 20 --out "Out/Restoration/$c"
-  fi
-done
-
-echo "== III. Counting, metrics and figures"
-if ls App/Processing/III-Evaluation/*.py >/dev/null 2>&1; then
-  echo "See App/Processing/III-Evaluation/README.md for the order of the evaluation scripts."
-else
-  echo "SKIPPED: the evaluation scripts are not in the repository yet (App/Processing/III-Evaluation/README.md)"
-fi
-
-echo "== IV. has_sai synthetic benchmark"
-if [ -f has_sai/results/synthetic/summary.md ]; then
-  echo "Results are committed in has_sai/results/synthetic/; run ./reproduce.sh --synthetic to regenerate them."
-else
-  "$P" has_sai/run_synthetic_benchmark.py
-fi
+case "${1:-}" in
+  --synthetic)
+    echo "== 3. has_sai synthetic benchmark"
+    "$P" has_sai/run_synthetic_benchmark.py
+    ;;
+  --full)
+    T=data/20261022_034827542_iOS.jpg
+    M=results/refactor_check/truth/t1/grape_masks/t1.png
+    W=third_party/weights/point/best_val.pth
+    for f in "$T" "$M" "$W"; do
+      [ -f "$f" ] || { echo "missing $f: see data/README.md and third_party/README.md"; exit 1; }
+    done
+    for b in 3 4 5 6; do
+      d=data/2cm_74cm_${b}branches
+      [ -d "$d/images" ] || { echo "missing $d/images: see data/README.md"; exit 1; }
+      if [ ! -d "$d/grape_masks" ] || [ ! -d "$d/removal_masks" ]; then
+        echo "== SAM 3 masks for $d"
+        PYTHONPATH=third_party/sam3 "$P" App/Segmentation/make_masks.py --input "$d/images" --output "$d" --grape-masks
+      fi
+    done
+    echo "== 3. Main study (Table 1), about 4 min per reconstruction"
+    "$P" run_experiments.py --truth "$T" --truth-grapes "$M" --labels labels/t1.csv --weights "$W"
+    "$P" analyse_experiments.py
+    echo "== 4. Baselines, ablations and uncertainty (Tables 2-3, Figs. 5-6)"
+    "$P" run_ablations.py launch
+    "$P" run_ablations.py a1 a2 a34 a5 a6 a7 a8
+    "$P" make_ablation_assets.py
+    ;;
+esac
 echo "Done."
