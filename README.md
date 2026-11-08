@@ -22,10 +22,13 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-F7DF1E" alt="MIT licence"></a>
 </p>
 
-# Smartphone-Only Occlusion Removal for Estimating Healthy Grape Yield
+<h1 align="center">Estimating Healthy Grape Yields for Vineyards</h1>
 
-AMME5710 Computer Vision and Image Processing, The University of Sydney, 2026.
-Has Salvesen, Finn Panko-Jones and Dinh Quang Huynh.
+<p align="center"><i>Occlusion removal and segmentation to distinguish ripe from unripe crop</i></p>
+
+<p align="center"><b>Dinh Quang Huynh</b>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<b>Has Salvesen</b>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<b>Finn Panko-Jones</b></p>
+
+<p align="center">AMME5710 Computer Vision and Image Processing<br>The University of Sydney, November 2026</p>
 
 Leaves hide fruit from any single camera position, so a camera-based crop estimate undercounts.
 A vehicle driving along a vine row cannot steer its camera around each leaf, but as it moves it

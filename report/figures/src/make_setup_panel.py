@@ -1,6 +1,11 @@
 """Draw panel (a) of figures/capture_setup.png (the capture rig) in TikZ and paste it over the
 old panel, keeping panel (b), the photo, and the image size unchanged.
 
+Oblique view of a closed box: a large viewing hole (about 3 cm border at box scale), a slit across
+the top near the back (2 cm from each side) through which the vines hang, grape clusters near the
+back wall, leafy vines near the front, a phone on a stand level with the hole, the rail well in
+front of the box and a lamp on the viewer's side lighting the scene.
+
     python3 make_setup_panel.py     (needs pdflatex, pdftoppm and Pillow)
 """
 import math
@@ -10,12 +15,22 @@ import subprocess
 
 HERE = pathlib.Path(__file__).resolve().parent
 FIG = HERE.parent / 'capture_setup.png'
-rng = random.Random(7)
-PW, PH = 9.12, 4.30          # panel size in cm; 912 x 430 px at 254 dpi
+rng = random.Random(11)
+PW, PH = 9.12, 4.30
+
+X0, Y0, X1, Y1 = 0.9, 1.9, 4.4, 4.0           # front face (about 1 unit = 17 cm)
+DX, DY = 1.0, 0.6                              # depth direction
+B = 0.17                                       # 3 cm border
+HX0, HY0, HX1, HY1 = X0 + B, Y0 + B, X1 - B, Y1 - B
+S = 0.12                                       # 2 cm slit inset
+F = 0.85                                       # slit position along the depth
+
+
+def P(x, y, d):
+    return x + d * DX, y + d * DY
 
 
 def vine_leaf(cx, cy, s, rot, fill):
-    """Grapevine leaf: five palmate lobes, serrated margin, petiole sinus at the base."""
     pts = []
     for k in range(360):
         t = 2 * math.pi * k / 360
@@ -33,39 +48,60 @@ def vine_leaf(cx, cy, s, rot, fill):
     return '\n'.join(out)
 
 
-def bunch(cx, cy, r, rows):
-    out = [f'\\draw[stem, line width=0.5pt] ({cx:.2f},{cy + r * 1.5:.2f}) -- ({cx + 0.03:.2f},{cy + r * 3:.2f});']
-    for i, n in enumerate(rows):
+def cluster(cx, cy, r, length, shade):
+    """A natural bunch: a tapering cone of jittered, overlapping berries drawn back to front."""
+    berries = []
+    n_rows = int(length / (1.25 * r))
+    for i in range(n_rows):
+        frac = i / max(n_rows - 1, 1)
+        width = (1 - 0.75 * frac) * 5.0 * r * (1.0 if frac > 0.12 else 0.8)
+        n = max(1, round(width / (1.4 * r)))
         for j in range(n):
-            out.append(f'\\shade[ball color=grapered] ({cx + (j - (n - 1) / 2) * 1.85 * r:.3f},{cy - i * 1.6 * r:.3f}) circle ({r:.3f});')
+            x = cx + (j - (n - 1) / 2) * 1.4 * r + rng.uniform(-0.35, 0.35) * r + 0.25 * r * math.sin(3 * frac)
+            y = cy - i * 1.25 * r + rng.uniform(-0.25, 0.25) * r
+            berries.append((y, x, r * rng.uniform(0.85, 1.1)))
+    berries.sort(reverse=True)
+    out = [f'\\draw[stem, line width=0.45pt] ({cx:.3f},{cy + 0.2:.3f}) -- ({cx:.3f},{cy:.3f});']
+    out += [f'\\shade[ball color={shade}] ({x:.3f},{y:.3f}) circle ({rr:.3f});' for y, x, rr in berries]
     return '\n'.join(out)
 
 
-# box geometry (oblique view): front face, top offset
-x0, y0, x1, y1 = 1.0, 1.25, 5.5, 3.55
-dx, dy = 0.95, 0.55
-hx0, hy0, hx1, hy1 = 1.75, 1.7, 4.75, 3.15           # viewing hole
-scene = []
-scene.append(f'\\fill[interior] ({hx0},{hy0}) rectangle ({hx1},{hy1});')
-scene.append(f'\\fill[backdrop, opacity=0.9] ({hx0 + 0.25},{hy0 + 0.2}) rectangle ({hx1 - 0.15},{hy1 - 0.08});')
-scene.append(f'\\fill[lit, opacity=0.35] ({hx0 + 1.2},{hy0}) -- ({hx1},{hy0}) -- ({hx1},{hy1}) -- ({hx0 + 2.2},{hy1}) -- cycle;')
-for cx, cy in [(2.25, 2.75), (2.9, 2.5), (3.55, 2.85), (4.2, 2.55), (2.6, 2.2), (3.95, 2.15)]:
-    scene.append(bunch(cx, cy, 0.055, [4, 3, 3, 2, 1]))
-for cx in [2.1, 2.75, 3.4, 4.05, 4.6]:
-    scene.append(f'\\draw[stem, line width=0.6pt] ({cx},{hy1}) .. controls ({cx + 0.15},{hy1 - 0.5}) and ({cx - 0.1},{hy1 - 0.9}) .. ({cx + 0.05},{hy0 + 0.1});')
-for cx, cy, s, rot in [(2.0, 2.95, 0.3, 0.2), (2.55, 2.55, 0.34, -0.3), (3.2, 2.95, 0.3, 0.4), (3.75, 2.4, 0.36, 0.1),
-                       (4.4, 2.9, 0.32, -0.4), (2.25, 2.0, 0.3, 0.5), (3.05, 1.95, 0.33, -0.2), (4.35, 2.0, 0.3, 0.3),
-                       (4.65, 2.45, 0.25, -0.6)]:
-    scene.append(vine_leaf(cx, cy, s, rot, rng.choice(['leafA', 'leafB', 'leafC'])))
+inside = []
+bx0, by0 = P(X0, Y0, 1)
+bx1, by1 = P(X1, Y1, 1)
+inside.append(f'\\fill[wallL] ({X0},{Y0}) -- ({bx0},{by0}) -- ({bx0},{by1}) -- ({X0},{Y1}) -- cycle;')
+inside.append(f'\\fill[floorc] ({X0},{Y0}) -- ({X1},{Y0}) -- ({bx1},{by0}) -- ({bx0},{by0}) -- cycle;')
+inside.append(f'\\fill[ceilc] ({X0},{Y1}) -- ({X1},{Y1}) -- ({bx1},{by1}) -- ({bx0},{by1}) -- cycle;')
+inside.append(f'\\fill[backwall] ({bx0},{by0}) rectangle ({bx1},{by1});')
+sx0, sy = P(X0 + S, Y1, F)
+sx1, _ = P(X1 - S, Y1, F)
+inside.append(f'\\fill[lit, opacity=0.35] ({sx0:.2f},{sy:.2f}) -- ({sx1:.2f},{sy:.2f}) -- ({sx1 - 0.1:.2f},{Y0 + 0.3:.2f}) -- ({sx0 - 0.1:.2f},{Y0 + 0.3:.2f}) -- cycle;')
+inside.append(f'\\fill[lit, opacity=0.30] ({HX0 + 1.2},{HY0}) -- ({HX1 + 0.8},{HY0 + 0.4}) -- ({HX1 + 0.8},{HY1}) -- ({HX0 + 2.4},{HY1}) -- cycle;')
+for u in [0.12, 0.3, 0.48, 0.66, 0.84]:
+    x, y = P(X0 + S + u * (X1 - X0 - 2 * S), Y1, F)
+    hang = rng.uniform(0.75, 1.05)
+    inside.append(f'\\draw[stem, line width=0.55pt] ({x:.3f},{y:.3f}) .. controls ({x + 0.05:.3f},{y - 0.4:.3f}) '
+                  f'and ({x - 0.05:.3f},{y - 0.8:.3f}) .. ({x + 0.02:.3f},{y - hang:.3f});')
+    inside.append(cluster(x + 0.02, y - hang + 0.05, 0.058, rng.uniform(0.5, 0.65), rng.choice(['grapeA', 'grapeB'])))
+for u, drop in [(0.04, 1.4), (0.42, 0.75), (0.97, 1.2)]:
+    x = HX0 + u * (HX1 - HX0)
+    y = HY1 + 0.05
+    inside.append(f'\\draw[stem, line width=0.8pt] ({x:.3f},{y:.3f}) .. controls ({x + 0.12:.3f},{y - 0.45:.3f}) '
+                  f'and ({x - 0.12:.3f},{y - 0.9:.3f}) .. ({x + 0.04:.3f},{y - drop:.3f});')
+    for k in range(2):
+        f = (k + 0.7) / 2.4
+        inside.append(vine_leaf(x + rng.uniform(-0.18, 0.18), y - f * drop, rng.uniform(0.16, 0.2),
+                                rng.uniform(-0.6, 0.6), rng.choice(['leafA', 'leafB', 'leafC'])))
 
 tex = r'''\documentclass[tikz,border=0pt]{standalone}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \definecolor{bg}{HTML}{F3EEF9}
 \definecolor{card}{HTML}{C8A167}\definecolor{cardtop}{HTML}{D8B47C}\definecolor{cardside}{HTML}{8C6A3C}
-\definecolor{interior}{HTML}{2B2116}\definecolor{backdrop}{HTML}{5E8F64}\definecolor{lit}{HTML}{FFF2B0}
+\definecolor{wallL}{HTML}{6E5534}\definecolor{floorc}{HTML}{8A6C43}\definecolor{ceilc}{HTML}{4A3A24}
+\definecolor{backwall}{HTML}{6F9E73}\definecolor{lit}{HTML}{FFF2B0}
 \definecolor{leafA}{HTML}{4E8A3A}\definecolor{leafB}{HTML}{5F9C45}\definecolor{leafC}{HTML}{3F7531}
-\definecolor{grapered}{HTML}{A3243B}\definecolor{stemc}{HTML}{6B4E2E}
+\definecolor{grapeA}{HTML}{A3243B}\definecolor{grapeB}{HTML}{8A1E3A}\definecolor{stemc}{HTML}{6B4E2E}
 \definecolor{railc}{HTML}{E9DCC0}\definecolor{steel}{HTML}{9AA0A6}\definecolor{axis}{HTML}{2F74C0}
 \tikzset{stem/.style={stemc}, leafedge/.style={black!60!leafC}, leafvein/.style={white!70!leafA},
          lab/.style={font=\scriptsize, anchor=west, text=black!80}, lead/.style={black!45, line width=0.35pt}}
@@ -73,42 +109,40 @@ tex = r'''\documentclass[tikz,border=0pt]{standalone}
 \begin{tikzpicture}
 \useasboundingbox (0,0) rectangle (''' + f'{PW},{PH}' + r''');
 \fill[bg] (0,0) rectangle (''' + f'{PW},{PH}' + r''');
-\begin{scope}[shift={(0.05,0.3)}, scale=0.8]
-% table
-\fill[black!6] (0,0.15) -- (6.4,0.15) -- (7.3,1.55) -- (0.9,1.55) -- cycle;
-% box: closed, front face with a viewing hole
-\fill[cardtop] (''' + f'{x0},{y1}) -- ({x1},{y1}) -- ({x1 + dx},{y1 + dy}) -- ({x0 + dx},{y1 + dy}' + r''') -- cycle;
-\fill[cardside] (''' + f'{x1},{y0}) -- ({x1 + dx},{y0 + dy}) -- ({x1 + dx},{y1 + dy}) -- ({x1},{y1}' + r''') -- cycle;
-\fill[card] (''' + f'{x0},{y0}) rectangle ({x1},{y1}' + r''');
-\draw[black!35, line width=0.3pt] (''' + f'{x0},{y1}) -- ({x1},{y1}) -- ({x1},{y0}) ({x1},{y1}) -- ({x1 + dx},{y1 + dy})' + r''';
-\draw[black!20, line width=0.3pt] (''' + f'{x0 + dx / 2},{y1 + dy / 2}) -- ({x1 + dx / 2},{y1 + dy / 2})' + r''';
-''' + '\n'.join(scene) + r'''
-\draw[black!55, line width=0.5pt] (''' + f'{hx0},{hy0}) rectangle ({hx1},{hy1}' + r''');
-% rail
-\fill[railc] (0.35,0.55) -- (6.3,0.55) -- (6.55,0.95) -- (0.6,0.95) -- cycle;
-\draw[steel, line width=0.6pt] (0.45,0.68) -- (6.38,0.68) (0.53,0.82) -- (6.47,0.82);
-\foreach \x in {0.9,1.3,...,6.1} \draw[black!30, line width=0.25pt] (\x,0.62) -- (\x+0.04,0.66);
-% lamp behind the rail (viewer side), shining into the scene
-\fill[lit, opacity=0.45] (5.0,1.5) -- (''' + f'{hx0 + 1.3},{hy1 - 0.05}) -- ({hx1 - 0.05},{hy0 + 0.05}' + r''') -- cycle;
-\fill[black!70] (6.05,0.22) ellipse (0.32 and 0.08);
-\draw[black!75, line width=1.1pt] (6.05,0.25) -- (6.25,1.05) -- (5.35,1.55);
-\fill[black!80] (5.0,1.47) -- (5.32,1.78) -- (5.55,1.42) -- (5.25,1.25) -- cycle;
-\fill[lit] (5.08,1.42) circle (0.07);
-% portrait iPhone on its holder, back towards the viewer, camera facing the box
-\fill[black!55] (2.95,0.82) rectangle (3.25,0.98);
-\fill[black!75] (3.04,0.98) rectangle (3.16,1.12);
-\fill[black!85, rounded corners=1.5pt] (2.93,1.1) rectangle (3.27,1.78);
-\fill[black!60, rounded corners=1pt] (2.97,1.55) rectangle (3.11,1.73);
-\fill[black!20] (3.015,1.68) circle (0.025) (3.065,1.6) circle (0.025) (3.015,1.6) circle (0.02);
-\draw[axis, densely dashed, line width=0.5pt] (3.1,1.62) -- (3.25,2.45);
-% labels
-\draw[lead] (5.9,3.6) -- (6.75,3.95); \node[lab] at (6.8,3.95) {closed cardboard box};
-\draw[lead] (4.75,3.0) -- (6.75,3.45); \node[lab] at (6.8,3.45) {viewing hole};
-\draw[lead] (4.45,2.55) -- (6.75,2.95); \node[lab, align=left] at (6.8,2.88) {grapevine leaves in\\front of red grapes};
-\draw[lead] (5.3,1.6) -- (6.75,2.25); \node[lab, align=left] at (6.8,2.18) {lamp behind the rail,\\lighting the scene};
-\draw[lead] (3.27,1.4) -- (6.75,1.6); \node[lab, align=left] at (6.8,1.53) {iPhone, portrait,\\on the rail};
-\draw[lead] (3.25,2.45) -- (3.6,3.9) -- (6.75,4.3); \node[lab, text=axis] at (6.8,4.3) {optical axis};
-\draw[lead] (6.4,0.8) -- (6.75,0.75); \node[lab] at (6.8,0.75) {rail, 20\,mm stops};
+\begin{scope}[shift={(0.05,0.05)}, scale=0.74]
+\fill[black!6] (-0.1,0.05) -- (6.3,0.05) -- (7.0,2.6) -- (0.6,2.6) -- cycle;
+\fill[cardtop] (''' + f'{X0},{Y1}) -- ({X1},{Y1}) -- ({X1 + DX},{Y1 + DY}) -- ({X0 + DX},{Y1 + DY}' + r''') -- cycle;
+\fill[cardside] (''' + f'{X1},{Y0}) -- ({X1 + DX},{Y0 + DY}) -- ({X1 + DX},{Y1 + DY}) -- ({X1},{Y1}' + r''') -- cycle;
+\fill[card] (''' + f'{X0},{Y0}) rectangle ({X1},{Y1}' + r''');
+\fill[black!80] (''' + f'{sx0:.3f},{sy:.3f}) -- ({sx1:.3f},{sy:.3f}) -- ({sx1 + 0.04:.3f},{sy + 0.025:.3f}) -- ({sx0 + 0.04:.3f},{sy + 0.025:.3f}' + r''') -- cycle;
+\begin{scope}
+\clip (''' + f'{HX0},{HY0}) rectangle ({HX1},{HY1}' + r''');
+''' + '\n'.join(inside) + r'''
+\end{scope}
+\draw[black!55, line width=0.5pt] (''' + f'{HX0},{HY0}) rectangle ({HX1},{HY1}' + r''');
+\draw[black!35, line width=0.3pt] (''' + f'{X0},{Y1}) -- ({X1},{Y1}) -- ({X1},{Y0}) ({X1},{Y1}) -- ({X1 + DX},{Y1 + DY})' + r''';
+\fill[railc] (0.2,0.35) -- (5.9,0.35) -- (6.1,0.72) -- (0.4,0.72) -- cycle;
+\draw[steel, line width=0.6pt] (0.3,0.47) -- (5.97,0.47) (0.37,0.6) -- (6.04,0.6);
+\foreach \x in {0.7,1.1,...,5.6} \draw[black!30, line width=0.25pt] (\x,0.4) -- (\x+0.04,0.44);
+\fill[black!55] (2.45,0.58) rectangle (2.75,0.72);
+\fill[black!70] (2.57,0.72) rectangle (2.63,2.45);
+\fill[black!85, rounded corners=1.5pt] (2.42,2.45) rectangle (2.78,3.15);
+\fill[black!60, rounded corners=1pt] (2.46,2.92) rectangle (2.6,3.1);
+\fill[black!20] (2.505,3.05) circle (0.025) (2.555,2.97) circle (0.025) (2.505,2.97) circle (0.02);
+\draw[axis, densely dashed, line width=0.5pt] (2.53,3.0) -- (2.75,3.12);
+\fill[lit, opacity=0.4] (4.55,2.55) -- (''' + f'{HX0 + 1.0},{HY1}) -- ({HX1},{HY0 + 0.1}' + r''') -- cycle;
+\fill[black!70] (5.5,0.15) ellipse (0.32 and 0.08);
+\draw[black!75, line width=1.1pt] (5.5,0.18) -- (5.75,1.55) -- (4.95,2.55);
+\fill[black!80] (4.5,2.5) -- (4.85,2.85) -- (5.1,2.45) -- (4.8,2.25) -- cycle;
+\fill[lit] (4.6,2.46) circle (0.07);
+\draw[lead] (2.75,3.12) -- (7.05,5.38); \node[lab, text=axis] at (7.1,5.38) {optical axis};
+\draw[lead] ''' + f'({(sx0 + sx1) / 2 + 0.6:.2f},{sy + 0.01:.2f})' + r''' -- (7.05,4.69); \node[lab] at (7.1,4.69) {slit, 2\,cm from each side};
+\draw[lead] (''' + f'{X1 + 0.5},{Y1 - 0.4}' + r''') -- (7.05,4.00); \node[lab] at (7.1,4.00) {closed cardboard box};
+\draw[lead] (''' + f'{HX1},{HY1 - 0.15}' + r''') -- (7.05,3.31); \node[lab] at (7.1,3.31) {viewing hole, 3\,cm border};
+\draw[lead] (''' + f'{HX1 - 0.3},{HY1 - 0.35}' + r''') -- (7.05,2.62); \node[lab] at (7.1,2.62) {grapes back, vines front};
+\draw[lead] (4.85,2.75) -- (7.05,1.93); \node[lab] at (7.1,1.93) {lamp lighting the scene};
+\draw[lead] (2.78,2.75) -- (7.05,1.24); \node[lab] at (7.1,1.24) {iPhone, portrait, on a stand};
+\draw[lead] (6.0,0.55) -- (7.05,0.55); \node[lab] at (7.1,0.55) {rail, 20\,mm stops};
 \end{scope}
 \end{tikzpicture}
 \end{document}
@@ -119,10 +153,7 @@ subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error', 'setup
 subprocess.run(['pdftoppm', '-png', '-r', '254', '-singlefile', 'setup_panel.pdf', 'setup_panel'], cwd=HERE, check=True)
 from PIL import Image  # noqa: E402
 panel = Image.open(HERE / 'setup_panel.png').convert('RGB').resize((912, 430), Image.LANCZOS)
-orig = HERE / 'capture_setup_original.png'
-if not orig.exists():
-    Image.open(FIG).save(orig)
-fig = Image.open(orig).convert('RGB')
+fig = Image.open(HERE / 'capture_setup_original.png').convert('RGB')
 fig.paste(panel, (0, 0))
 fig.save(FIG)
 for ext in ('aux', 'log'):
