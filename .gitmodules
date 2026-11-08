@@ -1,0 +1,6 @@
+[submodule "third_party/sam3"]
+	path = third_party/sam3
+	url = https://github.com/facebookresearch/sam3.git
+[submodule "third_party/GrapeSAM"]
+	path = third_party/GrapeSAM
+	url = https://github.com/tong-xz/GrapeSAM

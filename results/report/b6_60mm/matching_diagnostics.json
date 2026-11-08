@@ -1,0 +1,321 @@
+{
+  "images": [
+    "20261022_033138665_iOS.jpeg",
+    "20261022_033152650_iOS.jpeg",
+    "20261022_033209327_iOS.jpeg",
+    "20261022_033231600_iOS.jpeg",
+    "20261022_033359492_iOS.jpeg",
+    "20261022_033416894_iOS.jpeg",
+    "20261022_033432248_iOS.jpeg",
+    "20261022_033451095_iOS.jpeg",
+    "20261022_033504473_iOS.jpeg"
+  ],
+  "accepted_pairs": 3,
+  "attempted_pairs": 26,
+  "connected_groups_1based": [
+    [
+      5,
+      6,
+      7,
+      8
+    ],
+    [
+      1
+    ],
+    [
+      2
+    ],
+    [
+      3
+    ],
+    [
+      4
+    ],
+    [
+      9
+    ]
+  ],
+  "pair_diagnostics": [
+    {
+      "pair_1based": [
+        1,
+        2
+      ],
+      "accepted": false,
+      "reciprocal_matches": 16,
+      "train_inliers": 7,
+      "train_inlier_fraction": 0.5833333333333334,
+      "held_out_matches": 4,
+      "held_out_median_error_px": 355.40580207390406,
+      "held_out_fraction_within_threshold": 0.5,
+      "scale": 0.9764814139488369,
+      "rotation_deg": -3.782598940212036,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        1,
+        3
+      ],
+      "accepted": false,
+      "reciprocal_matches": 2,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        1,
+        4
+      ],
+      "accepted": false,
+      "reciprocal_matches": 3,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        1,
+        5
+      ],
+      "accepted": false,
+      "reciprocal_matches": 4,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        2,
+        3
+      ],
+      "accepted": false,
+      "reciprocal_matches": 8,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        2,
+        4
+      ],
+      "accepted": false,
+      "reciprocal_matches": 5,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        2,
+        5
+      ],
+      "accepted": false,
+      "reciprocal_matches": 2,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        2,
+        6
+      ],
+      "accepted": false,
+      "reciprocal_matches": 3,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        3,
+        4
+      ],
+      "accepted": false,
+      "reciprocal_matches": 7,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        3,
+        5
+      ],
+      "accepted": false,
+      "reciprocal_matches": 10,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        3,
+        6
+      ],
+      "accepted": false,
+      "reciprocal_matches": 9,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        3,
+        7
+      ],
+      "accepted": false,
+      "reciprocal_matches": 2,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        4,
+        5
+      ],
+      "accepted": false,
+      "reciprocal_matches": 16,
+      "train_inliers": 9,
+      "train_inlier_fraction": 0.75,
+      "held_out_matches": 4,
+      "held_out_median_error_px": 0.4866440140451962,
+      "held_out_fraction_within_threshold": 0.75,
+      "scale": 0.9993692637178561,
+      "rotation_deg": 0.08814837032662433,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        4,
+        6
+      ],
+      "accepted": false,
+      "reciprocal_matches": 15,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        4,
+        7
+      ],
+      "accepted": false,
+      "reciprocal_matches": 7,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        4,
+        8
+      ],
+      "accepted": false,
+      "reciprocal_matches": 1,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        5,
+        6
+      ],
+      "accepted": true,
+      "reciprocal_matches": 27,
+      "train_inliers": 16,
+      "train_inlier_fraction": 0.8,
+      "held_out_matches": 7,
+      "held_out_median_error_px": 0.6570105390246054,
+      "held_out_fraction_within_threshold": 0.5714285714285714,
+      "scale": 1.007735049115059,
+      "rotation_deg": 0.11220036154569185
+    },
+    {
+      "pair_1based": [
+        5,
+        7
+      ],
+      "accepted": false,
+      "reciprocal_matches": 17,
+      "train_inliers": 7,
+      "train_inlier_fraction": 0.5833333333333334,
+      "held_out_matches": 5,
+      "held_out_median_error_px": 0.6152773455702975,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.01061409846769,
+      "rotation_deg": -0.08705076731238783,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        5,
+        8
+      ],
+      "accepted": false,
+      "reciprocal_matches": 15,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        5,
+        9
+      ],
+      "accepted": false,
+      "reciprocal_matches": 1,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        6,
+        7
+      ],
+      "accepted": true,
+      "reciprocal_matches": 45,
+      "train_inliers": 24,
+      "train_inlier_fraction": 0.7272727272727273,
+      "held_out_matches": 12,
+      "held_out_median_error_px": 0.5498731875396133,
+      "held_out_fraction_within_threshold": 0.9166666666666666,
+      "scale": 1.0035474347827802,
+      "rotation_deg": -0.09795369516929808
+    },
+    {
+      "pair_1based": [
+        6,
+        8
+      ],
+      "accepted": false,
+      "reciprocal_matches": 17,
+      "train_inliers": 7,
+      "train_inlier_fraction": 0.5833333333333334,
+      "held_out_matches": 5,
+      "held_out_median_error_px": 0.7241406995843863,
+      "held_out_fraction_within_threshold": 0.8,
+      "scale": 1.015172787156795,
+      "rotation_deg": -0.06479014583115063,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        6,
+        9
+      ],
+      "accepted": false,
+      "reciprocal_matches": 9,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        7,
+        8
+      ],
+      "accepted": true,
+      "reciprocal_matches": 38,
+      "train_inliers": 17,
+      "train_inlier_fraction": 0.6071428571428571,
+      "held_out_matches": 10,
+      "held_out_median_error_px": 23.04664441064643,
+      "held_out_fraction_within_threshold": 0.5,
+      "scale": 1.0082884938514785,
+      "rotation_deg": -0.05785701134966685
+    },
+    {
+      "pair_1based": [
+        7,
+        9
+      ],
+      "accepted": false,
+      "reciprocal_matches": 4,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        8,
+        9
+      ],
+      "accepted": false,
+      "reciprocal_matches": 8,
+      "reason": "insufficient reciprocal target matches"
+    }
+  ],
+  "note": "Groups represent accepted feature matches, NOT necessarily a successful global alignment."
+}

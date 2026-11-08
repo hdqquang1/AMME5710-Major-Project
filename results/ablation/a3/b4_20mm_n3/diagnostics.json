@@ -1,0 +1,207 @@
+{
+  "method": "target-feature pose graph and observed-source selection",
+  "parameters": {
+    "images": "results\\ablation\\subsets\\b4_20mm_n3",
+    "out": "results\\ablation\\a3\\b4_20mm_n3",
+    "scale": 0.8,
+    "ref": 2,
+    "target_roi": [
+      0.03,
+      0.34,
+      0.97,
+      0.6
+    ],
+    "occluder_depth_range": [
+      740,
+      800
+    ],
+    "target_depth_range": [
+      1100,
+      1200
+    ],
+    "spacing": 20.0,
+    "neighbours": 4,
+    "min_inliers": 12,
+    "min_views": 3,
+    "min_baseline_mm": 40,
+    "tile_size": 192,
+    "min_region_area": 25,
+    "max_registration_error": 3,
+    "canvas": "reference",
+    "segment": "colour",
+    "colour": "red",
+    "fruit_prompt": "grape",
+    "grape_masks": "data\\2cm_74cm_4branches\\grape_masks",
+    "foliage_masks": "data\\2cm_74cm_4branches\\removal_masks"
+  },
+  "views": [
+    "20261022_034141004_iOS.jpeg",
+    "20261022_034147587_iOS.jpeg",
+    "20261022_034153041_iOS.jpeg"
+  ],
+  "original_size": [
+    3024,
+    4032
+  ],
+  "processing_size": [
+    2419,
+    3226
+  ],
+  "reference_1based": 2,
+  "segmentation": {
+    "fruit": "saved masks",
+    "fruit_prompt": null,
+    "foliage": "data\\2cm_74cm_4branches\\removal_masks",
+    "colour_thresholds": null
+  },
+  "registration": {
+    "connected_views_1based": [
+      1,
+      2,
+      3
+    ],
+    "excluded_views_1based": [],
+    "held_out_correspondences": 121,
+    "held_out_median_error_px": 0.6034216530447837,
+    "held_out_fraction_within_3px": 0.9917355371900827,
+    "per_view_validation": [
+      {
+        "view_1based": 1,
+        "correspondences": 75,
+        "median_error_px": 0.7138325903485938
+      },
+      {
+        "view_1based": 2,
+        "correspondences": 88,
+        "median_error_px": 0.5242430885992336
+      },
+      {
+        "view_1based": 3,
+        "correspondences": 79,
+        "median_error_px": 0.6790933508666813
+      }
+    ],
+    "max_view_median_error_px": 3,
+    "note": "Held-out feature transfer errors are alignment diagnostics, not labelled grape segmentation accuracy."
+  },
+  "pair_diagnostics": [
+    {
+      "pair_1based": [
+        1,
+        2
+      ],
+      "accepted": true,
+      "reciprocal_matches": 166,
+      "train_inliers": 114,
+      "train_inlier_fraction": 0.9193548387096774,
+      "held_out_matches": 42,
+      "held_out_median_error_px": 0.5612270208640324,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.0014322037328933,
+      "rotation_deg": -0.001500021247553518
+    },
+    {
+      "pair_1based": [
+        1,
+        3
+      ],
+      "accepted": true,
+      "reciprocal_matches": 129,
+      "train_inliers": 66,
+      "train_inlier_fraction": 0.6875,
+      "held_out_matches": 33,
+      "held_out_median_error_px": 1.0170938915465242,
+      "held_out_fraction_within_threshold": 0.9393939393939394,
+      "scale": 1.001330290302993,
+      "rotation_deg": -0.10415804346103408
+    },
+    {
+      "pair_1based": [
+        2,
+        3
+      ],
+      "accepted": true,
+      "reciprocal_matches": 182,
+      "train_inliers": 122,
+      "train_inlier_fraction": 0.8970588235294118,
+      "held_out_matches": 46,
+      "held_out_median_error_px": 0.5106996088435117,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.0010326172253718,
+      "rotation_deg": -0.038376649241173136
+    }
+  ],
+  "source_to_reference_matrices": [
+    [
+      [
+        1.0010937265612796,
+        0.00029678181552808547,
+        42.238435130068865
+      ],
+      [
+        -0.00029678181552808547,
+        1.0010937265612796,
+        -0.795168641131113
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.9991711482233935,
+        -0.0009119191625311949,
+        -37.679676110683886
+      ],
+      [
+        0.0009119191625311949,
+        0.9991711482233935,
+        -0.5175548787533444
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  ],
+  "limitations": [
+    "Fruit masks, colour thresholds and the ROI are scene-specific priors and need review.",
+    "The 2D target model approximates a range of grape depths; alignment can still be imperfect.",
+    "Neighbouring-view graph consistency does not establish true camera calibration or metric depth.",
+    "A surface must have sufficient clear observations; unseen surfaces and backs of berries remain unknown.",
+    "No model was trained for grape identity, ripeness, health, or berry counting."
+  ],
+  "closeup_bounds_canvas_px": [
+    946,
+    1177,
+    1798,
+    1819
+  ],
+  "supported_target_pixels": 18910,
+  "reliable_target_pixels": 18906,
+  "canvas_origin_reference_processing_px": [
+    0,
+    0
+  ],
+  "note": "Target pixels are fruit candidates supported by multiple aligned views, not verified grape instances or berry counts."
+}

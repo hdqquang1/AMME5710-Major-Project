@@ -1,0 +1,64 @@
+{
+  "images": [
+    "20261022_034141004_iOS.jpeg",
+    "20261022_034147587_iOS.jpeg",
+    "20261022_034153041_iOS.jpeg"
+  ],
+  "accepted_pairs": 3,
+  "attempted_pairs": 3,
+  "connected_groups_1based": [
+    [
+      1,
+      2,
+      3
+    ]
+  ],
+  "pair_diagnostics": [
+    {
+      "pair_1based": [
+        1,
+        2
+      ],
+      "accepted": true,
+      "reciprocal_matches": 166,
+      "train_inliers": 114,
+      "train_inlier_fraction": 0.9193548387096774,
+      "held_out_matches": 42,
+      "held_out_median_error_px": 0.5612270208640324,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.0014322037328933,
+      "rotation_deg": -0.001500021247553518
+    },
+    {
+      "pair_1based": [
+        1,
+        3
+      ],
+      "accepted": true,
+      "reciprocal_matches": 129,
+      "train_inliers": 66,
+      "train_inlier_fraction": 0.6875,
+      "held_out_matches": 33,
+      "held_out_median_error_px": 1.0170938915465242,
+      "held_out_fraction_within_threshold": 0.9393939393939394,
+      "scale": 1.001330290302993,
+      "rotation_deg": -0.10415804346103408
+    },
+    {
+      "pair_1based": [
+        2,
+        3
+      ],
+      "accepted": true,
+      "reciprocal_matches": 182,
+      "train_inliers": 122,
+      "train_inlier_fraction": 0.8970588235294118,
+      "held_out_matches": 46,
+      "held_out_median_error_px": 0.5106996088435117,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.0010326172253718,
+      "rotation_deg": -0.038376649241173136
+    }
+  ],
+  "note": "Groups represent accepted feature matches, NOT necessarily a successful global alignment."
+}

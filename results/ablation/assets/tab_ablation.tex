@@ -1,0 +1,36 @@
+\begin{tabular}{@{}llccc@{}}
+\toprule
+& Variant & \multicolumn{3}{c}{5 br.}\\
+\cmidrule(lr){3-5}
+& & R & P & F1\\
+\midrule
+full & ours (m=3, B=40, rms=30, copy best) & 87 & 82 & 0.77\\
+\addlinespace[2pt]
+min views (B=0) & m=1 & 93 & 63 & 0.77\\
+ & m=2 & 91 & 76 & 0.77\\
+ & m=3 & 87 & 82 & 0.77\\
+ & m=5 & 77 & 89 & 0.67\\
+\addlinespace[2pt]
+min span (m=3) & B=0 mm & 87 & 82 & 0.77\\
+ & B=20 mm & 87 & 82 & 0.77\\
+ & B=80 mm & 82 & 84 & 0.71\\
+\addlinespace[2pt]
+colour consensus & rms=15 & 83 & 83 & 0.68\\
+ & rms=60 & 88 & 81 & 0.60\\
+ & rms=off & 89 & 80 & 0.26\\
+\addlinespace[2pt]
+output colour & median blend & 87 & 82 & 0.76\\
+\addlinespace[2pt]
+no consensus at all & m=1, B=0, rms=off & 94 & 63 & 0.30\\
+\addlinespace[2pt]
+masks & colour (red) fruit mask & 66 & 87 & 0.54\\
+ & no fruit mask & 87 & 1 & 0.53\\
+ & no foliage mask & 87 & 82 & 0.77\\
+\addlinespace[2pt]
+alignment & whole-image SIFT & \multicolumn{3}{c}{alignment failed}\\
+ & no held-out view check & 87 & 82 & 0.77\\
+ & chained similarity & 88 & 82 & 0.81\\
+ & chained homography & 71 & 70 & 0.59\\
+ & joint translation only & 87 & 82 & 0.77\\
+\bottomrule
+\end{tabular}

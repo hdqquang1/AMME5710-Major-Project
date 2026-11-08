@@ -1,0 +1,925 @@
+{
+  "method": "target-feature pose graph and observed-source selection",
+  "parameters": {
+    "images": "results\\report\\subsets\\b5_40",
+    "out": "results\\report\\b5_40mm",
+    "scale": 0.8,
+    "ref": 11,
+    "target_roi": [
+      0.03,
+      0.34,
+      0.97,
+      0.6
+    ],
+    "occluder_depth_range": [
+      740,
+      800
+    ],
+    "target_depth_range": [
+      1100,
+      1200
+    ],
+    "spacing": 40.0,
+    "neighbours": 4,
+    "min_inliers": 12,
+    "min_views": 3,
+    "min_baseline_mm": 40,
+    "tile_size": 192,
+    "min_region_area": 25,
+    "max_registration_error": 3,
+    "canvas": "reference",
+    "segment": "colour",
+    "colour": "red",
+    "fruit_prompt": "grape",
+    "grape_masks": "data\\2cm_74cm_5branches\\grape_masks",
+    "foliage_masks": "data\\2cm_74cm_5branches\\removal_masks"
+  },
+  "views": [
+    "20261022_033606632_iOS.jpeg",
+    "20261022_033616395_iOS.jpeg",
+    "20261022_033624437_iOS.jpeg",
+    "20261022_033632103_iOS.jpeg",
+    "20261022_033639419_iOS.jpeg",
+    "20261022_033647450_iOS.jpeg",
+    "20261022_033654650_iOS.jpeg",
+    "20261022_033702521_iOS.jpeg",
+    "20261022_033709899_iOS.jpeg",
+    "20261022_033721688_iOS.jpeg",
+    "20261022_033735399_iOS.jpeg",
+    "20261022_033744948_iOS.jpeg",
+    "20261022_033755420_iOS.jpeg",
+    "20261022_033804959_iOS.jpeg"
+  ],
+  "original_size": [
+    3024,
+    4032
+  ],
+  "processing_size": [
+    2419,
+    3226
+  ],
+  "reference_1based": 11,
+  "segmentation": {
+    "fruit": "saved masks",
+    "fruit_prompt": null,
+    "foliage": "data\\2cm_74cm_5branches\\removal_masks",
+    "colour_thresholds": null
+  },
+  "registration": {
+    "connected_views_1based": [
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "excluded_views_1based": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "held_out_correspondences": 244,
+    "held_out_median_error_px": 0.9731247234678673,
+    "held_out_fraction_within_3px": 0.860655737704918,
+    "per_view_validation": [
+      {
+        "view_1based": 7,
+        "correspondences": 32,
+        "median_error_px": 1.5686962119695194
+      },
+      {
+        "view_1based": 8,
+        "correspondences": 50,
+        "median_error_px": 0.9939948565665297
+      },
+      {
+        "view_1based": 9,
+        "correspondences": 75,
+        "median_error_px": 1.1761694883487201
+      },
+      {
+        "view_1based": 10,
+        "correspondences": 87,
+        "median_error_px": 0.8862128691234049
+      },
+      {
+        "view_1based": 11,
+        "correspondences": 86,
+        "median_error_px": 0.7652122061689911
+      },
+      {
+        "view_1based": 12,
+        "correspondences": 75,
+        "median_error_px": 0.9695307522657871
+      },
+      {
+        "view_1based": 13,
+        "correspondences": 53,
+        "median_error_px": 0.9141004469954014
+      },
+      {
+        "view_1based": 14,
+        "correspondences": 30,
+        "median_error_px": 0.953704537248679
+      }
+    ],
+    "max_view_median_error_px": 3,
+    "note": "Held-out feature transfer errors are alignment diagnostics, not labelled grape segmentation accuracy."
+  },
+  "pair_diagnostics": [
+    {
+      "pair_1based": [
+        1,
+        2
+      ],
+      "accepted": false,
+      "reciprocal_matches": 54,
+      "train_inliers": 19,
+      "train_inlier_fraction": 0.475,
+      "held_out_matches": 14,
+      "held_out_median_error_px": 1.4876974006172117,
+      "held_out_fraction_within_threshold": 0.6428571428571429,
+      "scale": 0.999801926175103,
+      "rotation_deg": 0.03301500932580603,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        1,
+        3
+      ],
+      "accepted": false,
+      "reciprocal_matches": 23,
+      "train_inliers": 8,
+      "train_inlier_fraction": 0.47058823529411764,
+      "held_out_matches": 6,
+      "held_out_median_error_px": 2.2897132370013535,
+      "held_out_fraction_within_threshold": 0.6666666666666666,
+      "scale": 0.9967584765508573,
+      "rotation_deg": -0.017613126803048596,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        1,
+        4
+      ],
+      "accepted": false,
+      "reciprocal_matches": 12,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        1,
+        5
+      ],
+      "accepted": false,
+      "reciprocal_matches": 3,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        2,
+        3
+      ],
+      "accepted": true,
+      "reciprocal_matches": 66,
+      "train_inliers": 39,
+      "train_inlier_fraction": 0.7959183673469388,
+      "held_out_matches": 17,
+      "held_out_median_error_px": 0.860519712596641,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 0.9992722010510049,
+      "rotation_deg": -0.016048529022733106
+    },
+    {
+      "pair_1based": [
+        2,
+        4
+      ],
+      "accepted": false,
+      "reciprocal_matches": 32,
+      "train_inliers": 10,
+      "train_inlier_fraction": 0.4166666666666667,
+      "held_out_matches": 8,
+      "held_out_median_error_px": 1.8580419594798496,
+      "held_out_fraction_within_threshold": 0.75,
+      "scale": 0.9926042105493932,
+      "rotation_deg": -0.03452888141928366,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        2,
+        5
+      ],
+      "accepted": false,
+      "reciprocal_matches": 14,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        2,
+        6
+      ],
+      "accepted": false,
+      "reciprocal_matches": 9,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        3,
+        4
+      ],
+      "accepted": true,
+      "reciprocal_matches": 49,
+      "train_inliers": 21,
+      "train_inlier_fraction": 0.5833333333333334,
+      "held_out_matches": 13,
+      "held_out_median_error_px": 1.0133260123183898,
+      "held_out_fraction_within_threshold": 0.9230769230769231,
+      "scale": 0.9936827661579238,
+      "rotation_deg": 0.007554481403187263
+    },
+    {
+      "pair_1based": [
+        3,
+        5
+      ],
+      "accepted": false,
+      "reciprocal_matches": 17,
+      "train_inliers": 7,
+      "train_inlier_fraction": 0.5833333333333334,
+      "held_out_matches": 5,
+      "held_out_median_error_px": 4.028596581813501,
+      "held_out_fraction_within_threshold": 0.4,
+      "scale": 0.9863417131178729,
+      "rotation_deg": -0.10716598092569156,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        3,
+        6
+      ],
+      "accepted": false,
+      "reciprocal_matches": 9,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        3,
+        7
+      ],
+      "accepted": false,
+      "reciprocal_matches": 14,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        4,
+        5
+      ],
+      "accepted": true,
+      "reciprocal_matches": 25,
+      "train_inliers": 13,
+      "train_inlier_fraction": 0.7222222222222222,
+      "held_out_matches": 7,
+      "held_out_median_error_px": 1.0413371160672802,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 0.998054296181444,
+      "rotation_deg": -0.14633235026410285
+    },
+    {
+      "pair_1based": [
+        4,
+        6
+      ],
+      "accepted": false,
+      "reciprocal_matches": 9,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        4,
+        7
+      ],
+      "accepted": false,
+      "reciprocal_matches": 15,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        4,
+        8
+      ],
+      "accepted": false,
+      "reciprocal_matches": 10,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        5,
+        6
+      ],
+      "accepted": false,
+      "reciprocal_matches": 17,
+      "train_inliers": 8,
+      "train_inlier_fraction": 0.6666666666666666,
+      "held_out_matches": 5,
+      "held_out_median_error_px": 2.000243441911804,
+      "held_out_fraction_within_threshold": 0.6,
+      "scale": 0.9902085735284848,
+      "rotation_deg": -0.48377056071840474,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        5,
+        7
+      ],
+      "accepted": false,
+      "reciprocal_matches": 18,
+      "train_inliers": 10,
+      "train_inlier_fraction": 0.7692307692307693,
+      "held_out_matches": 5,
+      "held_out_median_error_px": 0.6293239684037849,
+      "held_out_fraction_within_threshold": 0.8,
+      "scale": 1.0021031998031014,
+      "rotation_deg": -0.38805510117246134,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        5,
+        8
+      ],
+      "accepted": false,
+      "reciprocal_matches": 15,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        5,
+        9
+      ],
+      "accepted": false,
+      "reciprocal_matches": 14,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        6,
+        7
+      ],
+      "accepted": false,
+      "reciprocal_matches": 19,
+      "train_inliers": 10,
+      "train_inlier_fraction": 0.7142857142857143,
+      "held_out_matches": 5,
+      "held_out_median_error_px": 1.0341967200454885,
+      "held_out_fraction_within_threshold": 0.8,
+      "scale": 0.9936110322156793,
+      "rotation_deg": -0.5085102427140505,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        6,
+        8
+      ],
+      "accepted": false,
+      "reciprocal_matches": 14,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        6,
+        9
+      ],
+      "accepted": false,
+      "reciprocal_matches": 18,
+      "train_inliers": 8,
+      "train_inlier_fraction": 0.6153846153846154,
+      "held_out_matches": 5,
+      "held_out_median_error_px": 1.4060563593348239,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 0.9763085278366651,
+      "rotation_deg": -0.888570952142038,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        6,
+        10
+      ],
+      "accepted": false,
+      "reciprocal_matches": 14,
+      "reason": "insufficient reciprocal target matches"
+    },
+    {
+      "pair_1based": [
+        7,
+        8
+      ],
+      "accepted": true,
+      "reciprocal_matches": 46,
+      "train_inliers": 23,
+      "train_inlier_fraction": 0.6764705882352942,
+      "held_out_matches": 12,
+      "held_out_median_error_px": 0.7269911198206049,
+      "held_out_fraction_within_threshold": 0.75,
+      "scale": 0.9964080060199786,
+      "rotation_deg": -0.0350003457388124
+    },
+    {
+      "pair_1based": [
+        7,
+        9
+      ],
+      "accepted": true,
+      "reciprocal_matches": 41,
+      "train_inliers": 23,
+      "train_inlier_fraction": 0.7666666666666667,
+      "held_out_matches": 11,
+      "held_out_median_error_px": 1.1112997333603756,
+      "held_out_fraction_within_threshold": 0.7272727272727273,
+      "scale": 0.9996120908986237,
+      "rotation_deg": -0.14569794658559862
+    },
+    {
+      "pair_1based": [
+        7,
+        10
+      ],
+      "accepted": true,
+      "reciprocal_matches": 34,
+      "train_inliers": 17,
+      "train_inlier_fraction": 0.68,
+      "held_out_matches": 9,
+      "held_out_median_error_px": 2.7764471688191175,
+      "held_out_fraction_within_threshold": 0.5555555555555556,
+      "scale": 0.9992750335907792,
+      "rotation_deg": -0.12524025605748176
+    },
+    {
+      "pair_1based": [
+        7,
+        11
+      ],
+      "accepted": false,
+      "reciprocal_matches": 21,
+      "train_inliers": 11,
+      "train_inlier_fraction": 0.7333333333333333,
+      "held_out_matches": 6,
+      "held_out_median_error_px": 1.2035280906935175,
+      "held_out_fraction_within_threshold": 0.6666666666666666,
+      "scale": 0.9878960518970753,
+      "rotation_deg": -1.0765264080840458,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        8,
+        9
+      ],
+      "accepted": true,
+      "reciprocal_matches": 68,
+      "train_inliers": 39,
+      "train_inlier_fraction": 0.7647058823529411,
+      "held_out_matches": 17,
+      "held_out_median_error_px": 0.8705368820078481,
+      "held_out_fraction_within_threshold": 0.8235294117647058,
+      "scale": 1.0005226417152526,
+      "rotation_deg": -0.0691331219832448
+    },
+    {
+      "pair_1based": [
+        8,
+        10
+      ],
+      "accepted": true,
+      "reciprocal_matches": 47,
+      "train_inliers": 23,
+      "train_inlier_fraction": 0.6571428571428571,
+      "held_out_matches": 12,
+      "held_out_median_error_px": 1.166553513406905,
+      "held_out_fraction_within_threshold": 0.9166666666666666,
+      "scale": 1.0026616719707406,
+      "rotation_deg": -0.11901812111946926
+    },
+    {
+      "pair_1based": [
+        8,
+        11
+      ],
+      "accepted": true,
+      "reciprocal_matches": 33,
+      "train_inliers": 18,
+      "train_inlier_fraction": 0.75,
+      "held_out_matches": 9,
+      "held_out_median_error_px": 1.5414796152823629,
+      "held_out_fraction_within_threshold": 0.5555555555555556,
+      "scale": 1.0154866200485688,
+      "rotation_deg": -0.06017473130567484
+    },
+    {
+      "pair_1based": [
+        8,
+        12
+      ],
+      "accepted": false,
+      "reciprocal_matches": 24,
+      "train_inliers": 8,
+      "train_inlier_fraction": 0.4444444444444444,
+      "held_out_matches": 6,
+      "held_out_median_error_px": 2.2064985012752154,
+      "held_out_fraction_within_threshold": 0.8333333333333334,
+      "scale": 1.01076166941333,
+      "rotation_deg": -0.19718259136743785,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        9,
+        10
+      ],
+      "accepted": true,
+      "reciprocal_matches": 78,
+      "train_inliers": 38,
+      "train_inlier_fraction": 0.6551724137931034,
+      "held_out_matches": 20,
+      "held_out_median_error_px": 0.6795572457746458,
+      "held_out_fraction_within_threshold": 0.95,
+      "scale": 1.0038586457851217,
+      "rotation_deg": -0.04058758045867979
+    },
+    {
+      "pair_1based": [
+        9,
+        11
+      ],
+      "accepted": true,
+      "reciprocal_matches": 57,
+      "train_inliers": 26,
+      "train_inlier_fraction": 0.6190476190476191,
+      "held_out_matches": 15,
+      "held_out_median_error_px": 2.6636520063672635,
+      "held_out_fraction_within_threshold": 0.6,
+      "scale": 1.01098201514637,
+      "rotation_deg": -0.027683116212993523
+    },
+    {
+      "pair_1based": [
+        9,
+        12
+      ],
+      "accepted": true,
+      "reciprocal_matches": 48,
+      "train_inliers": 18,
+      "train_inlier_fraction": 0.5,
+      "held_out_matches": 12,
+      "held_out_median_error_px": 2.48663054692985,
+      "held_out_fraction_within_threshold": 0.5833333333333334,
+      "scale": 1.017007251662054,
+      "rotation_deg": -0.0714632448187262
+    },
+    {
+      "pair_1based": [
+        9,
+        13
+      ],
+      "accepted": false,
+      "reciprocal_matches": 27,
+      "train_inliers": 10,
+      "train_inlier_fraction": 0.5,
+      "held_out_matches": 7,
+      "held_out_median_error_px": 1.5766069775182394,
+      "held_out_fraction_within_threshold": 0.5714285714285714,
+      "scale": 0.9434420830907301,
+      "rotation_deg": 5.13984823499173,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        10,
+        11
+      ],
+      "accepted": true,
+      "reciprocal_matches": 87,
+      "train_inliers": 49,
+      "train_inlier_fraction": 0.7538461538461538,
+      "held_out_matches": 22,
+      "held_out_median_error_px": 0.4071093175446855,
+      "held_out_fraction_within_threshold": 0.8636363636363636,
+      "scale": 1.004203743534634,
+      "rotation_deg": -0.02328706140792561
+    },
+    {
+      "pair_1based": [
+        10,
+        12
+      ],
+      "accepted": true,
+      "reciprocal_matches": 58,
+      "train_inliers": 29,
+      "train_inlier_fraction": 0.6744186046511628,
+      "held_out_matches": 15,
+      "held_out_median_error_px": 0.858548043687164,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.0090385945203384,
+      "rotation_deg": -0.07452774830903679
+    },
+    {
+      "pair_1based": [
+        10,
+        13
+      ],
+      "accepted": true,
+      "reciprocal_matches": 35,
+      "train_inliers": 15,
+      "train_inlier_fraction": 0.5769230769230769,
+      "held_out_matches": 9,
+      "held_out_median_error_px": 2.1184973302636223,
+      "held_out_fraction_within_threshold": 0.8888888888888888,
+      "scale": 1.0136247403340994,
+      "rotation_deg": -0.09455421797143217
+    },
+    {
+      "pair_1based": [
+        10,
+        14
+      ],
+      "accepted": false,
+      "reciprocal_matches": 22,
+      "train_inliers": 10,
+      "train_inlier_fraction": 0.625,
+      "held_out_matches": 6,
+      "held_out_median_error_px": 4.991574010365019,
+      "held_out_fraction_within_threshold": 0.16666666666666666,
+      "scale": 1.0221749629792487,
+      "rotation_deg": 1.0043787627599894,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        11,
+        12
+      ],
+      "accepted": true,
+      "reciprocal_matches": 82,
+      "train_inliers": 53,
+      "train_inlier_fraction": 0.8688524590163934,
+      "held_out_matches": 21,
+      "held_out_median_error_px": 0.4350519342093396,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.0048156823386698,
+      "rotation_deg": -0.057612213522262874
+    },
+    {
+      "pair_1based": [
+        11,
+        13
+      ],
+      "accepted": true,
+      "reciprocal_matches": 43,
+      "train_inliers": 21,
+      "train_inlier_fraction": 0.65625,
+      "held_out_matches": 11,
+      "held_out_median_error_px": 0.6965990831127904,
+      "held_out_fraction_within_threshold": 0.9090909090909091,
+      "scale": 1.0099412523883171,
+      "rotation_deg": -0.05654233120626821
+    },
+    {
+      "pair_1based": [
+        11,
+        14
+      ],
+      "accepted": true,
+      "reciprocal_matches": 29,
+      "train_inliers": 16,
+      "train_inlier_fraction": 0.7619047619047619,
+      "held_out_matches": 8,
+      "held_out_median_error_px": 0.845426365411778,
+      "held_out_fraction_within_threshold": 0.75,
+      "scale": 1.0064296428020625,
+      "rotation_deg": 0.3772101792674748
+    },
+    {
+      "pair_1based": [
+        12,
+        13
+      ],
+      "accepted": true,
+      "reciprocal_matches": 75,
+      "train_inliers": 40,
+      "train_inlier_fraction": 0.7142857142857143,
+      "held_out_matches": 19,
+      "held_out_median_error_px": 0.9791723641201239,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.0044780951091203,
+      "rotation_deg": 0.018965340599729187
+    },
+    {
+      "pair_1based": [
+        12,
+        14
+      ],
+      "accepted": true,
+      "reciprocal_matches": 31,
+      "train_inliers": 16,
+      "train_inlier_fraction": 0.6956521739130435,
+      "held_out_matches": 8,
+      "held_out_median_error_px": 1.2402660176784899,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 0.9840831024891833,
+      "rotation_deg": 0.4251288822583121
+    },
+    {
+      "pair_1based": [
+        13,
+        14
+      ],
+      "accepted": true,
+      "reciprocal_matches": 53,
+      "train_inliers": 28,
+      "train_inlier_fraction": 0.717948717948718,
+      "held_out_matches": 14,
+      "held_out_median_error_px": 0.8373123298569044,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.0036320053949503,
+      "rotation_deg": 0.052346471861519236
+    }
+  ],
+  "source_to_reference_matrices": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+      [
+        1.00833281713802,
+        0.002470179841076059,
+        305.1268861648964
+      ],
+      [
+        -0.002470179841076059,
+        1.00833281713802,
+        11.789375845693485
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        1.0115321495343248,
+        0.0017305130067969484,
+        221.17690559021457
+      ],
+      [
+        -0.0017305130067969484,
+        1.0115321495343248,
+        11.893441803399128
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        1.0105146612490392,
+        0.00048309937977584756,
+        144.7569627555763
+      ],
+      [
+        -0.00048309937977584756,
+        1.0105146612490392,
+        -9.531808465224685
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        1.005072576413349,
+        0.00040716438969560045,
+        73.72817575804879
+      ],
+      [
+        -0.00040716438969560045,
+        1.005072576413349,
+        -7.200708810436254
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.9950857648411261,
+        -0.0009718469627556295,
+        -70.12275190916284
+      ],
+      [
+        0.0009718469627556295,
+        0.9950857648411261,
+        4.423912000089558
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.9910062870909586,
+        -0.0008608707123765359,
+        -140.49493032533906
+      ],
+      [
+        0.0008608707123765359,
+        0.9910062870909586,
+        7.72138254670017
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.9878734704523283,
+        -8.095951643799504e-05,
+        -222.20697521553598
+      ],
+      [
+        8.095951643799504e-05,
+        0.9878734704523283,
+        21.440611772659622
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  ],
+  "limitations": [
+    "Fruit masks, colour thresholds and the ROI are scene-specific priors and need review.",
+    "The 2D target model approximates a range of grape depths; alignment can still be imperfect.",
+    "Neighbouring-view graph consistency does not establish true camera calibration or metric depth.",
+    "A surface must have sufficient clear observations; unseen surfaces and backs of berries remain unknown.",
+    "No model was trained for grape identity, ripeness, health, or berry counting."
+  ],
+  "closeup_bounds_canvas_px": [
+    1000,
+    1177,
+    1855,
+    1818
+  ],
+  "supported_target_pixels": 23664,
+  "reliable_target_pixels": 23435,
+  "canvas_origin_reference_processing_px": [
+    0,
+    0
+  ],
+  "note": "Target pixels are fruit candidates supported by multiple aligned views, not verified grape instances or berry counts."
+}

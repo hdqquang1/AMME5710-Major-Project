@@ -1,0 +1,9 @@
+{
+  "group": "no consensus at all",
+  "variant": "m=1, B=0, rms=off",
+  "pose": null,
+  "min_views": 1,
+  "min_baseline": 0,
+  "rms": 1000000000.0,
+  "fusion_s": 346.52810978889465
+}

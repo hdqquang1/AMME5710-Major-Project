@@ -1,0 +1,4 @@
+{
+  "method": "depth_shift_mean",
+  "disparity_px_per_step": 56.0
+}

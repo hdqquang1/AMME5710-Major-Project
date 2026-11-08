@@ -1,0 +1,16 @@
+{
+  "scale": 0.8,
+  "tolerance_px": 24.000000000000004,
+  "truth": "data\\20261022_034827542_iOS.jpg",
+  "labels": "labels\\t1.csv",
+  "weights": "third_party\\weights\\point\\best_val.pth",
+  "hough": {
+    "canny_high": 100,
+    "votes": 12
+  },
+  "sam_count": {
+    "prompt": "cherry",
+    "threshold": 0.1,
+    "background": 0
+  }
+}

@@ -1,0 +1,361 @@
+{
+  "method": "target-feature pose graph and observed-source selection",
+  "parameters": {
+    "images": "results\\ablation\\subsets\\b4_20mm_n5",
+    "out": "results\\ablation\\a3\\b4_20mm_n5",
+    "scale": 0.8,
+    "ref": 3,
+    "target_roi": [
+      0.03,
+      0.34,
+      0.97,
+      0.6
+    ],
+    "occluder_depth_range": [
+      740,
+      800
+    ],
+    "target_depth_range": [
+      1100,
+      1200
+    ],
+    "spacing": 20.0,
+    "neighbours": 4,
+    "min_inliers": 12,
+    "min_views": 3,
+    "min_baseline_mm": 40,
+    "tile_size": 192,
+    "min_region_area": 25,
+    "max_registration_error": 3,
+    "canvas": "reference",
+    "segment": "colour",
+    "colour": "red",
+    "fruit_prompt": "grape",
+    "grape_masks": "data\\2cm_74cm_4branches\\grape_masks",
+    "foliage_masks": "data\\2cm_74cm_4branches\\removal_masks"
+  },
+  "views": [
+    "20261022_034136648_iOS.jpeg",
+    "20261022_034141004_iOS.jpeg",
+    "20261022_034147587_iOS.jpeg",
+    "20261022_034153041_iOS.jpeg",
+    "20261022_034157677_iOS.jpeg"
+  ],
+  "original_size": [
+    3024,
+    4032
+  ],
+  "processing_size": [
+    2419,
+    3226
+  ],
+  "reference_1based": 3,
+  "segmentation": {
+    "fruit": "saved masks",
+    "fruit_prompt": null,
+    "foliage": "data\\2cm_74cm_4branches\\removal_masks",
+    "colour_thresholds": null
+  },
+  "registration": {
+    "connected_views_1based": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "excluded_views_1based": [],
+    "held_out_correspondences": 314,
+    "held_out_median_error_px": 0.7115607680714245,
+    "held_out_fraction_within_3px": 0.9426751592356688,
+    "per_view_validation": [
+      {
+        "view_1based": 1,
+        "correspondences": 120,
+        "median_error_px": 0.686023707823701
+      },
+      {
+        "view_1based": 2,
+        "correspondences": 120,
+        "median_error_px": 0.6234470824794923
+      },
+      {
+        "view_1based": 3,
+        "correspondences": 151,
+        "median_error_px": 0.6918872065558574
+      },
+      {
+        "view_1based": 4,
+        "correspondences": 148,
+        "median_error_px": 0.7821559231103391
+      },
+      {
+        "view_1based": 5,
+        "correspondences": 89,
+        "median_error_px": 0.8821609643885961
+      }
+    ],
+    "max_view_median_error_px": 3,
+    "note": "Held-out feature transfer errors are alignment diagnostics, not labelled grape segmentation accuracy."
+  },
+  "pair_diagnostics": [
+    {
+      "pair_1based": [
+        1,
+        2
+      ],
+      "accepted": true,
+      "reciprocal_matches": 178,
+      "train_inliers": 126,
+      "train_inlier_fraction": 0.9473684210526315,
+      "held_out_matches": 45,
+      "held_out_median_error_px": 0.3583232355247884,
+      "held_out_fraction_within_threshold": 0.9777777777777777,
+      "scale": 1.0010199798025905,
+      "rotation_deg": 0.020856152157209897
+    },
+    {
+      "pair_1based": [
+        1,
+        3
+      ],
+      "accepted": true,
+      "reciprocal_matches": 135,
+      "train_inliers": 78,
+      "train_inlier_fraction": 0.7722772277227723,
+      "held_out_matches": 34,
+      "held_out_median_error_px": 0.6477481759344663,
+      "held_out_fraction_within_threshold": 0.9705882352941176,
+      "scale": 1.0022766144935098,
+      "rotation_deg": -0.022419255623065026
+    },
+    {
+      "pair_1based": [
+        1,
+        4
+      ],
+      "accepted": true,
+      "reciprocal_matches": 99,
+      "train_inliers": 46,
+      "train_inlier_fraction": 0.6216216216216216,
+      "held_out_matches": 25,
+      "held_out_median_error_px": 1.1834771315470374,
+      "held_out_fraction_within_threshold": 0.8,
+      "scale": 1.001890115713452,
+      "rotation_deg": -0.18553361226788792
+    },
+    {
+      "pair_1based": [
+        1,
+        5
+      ],
+      "accepted": true,
+      "reciprocal_matches": 63,
+      "train_inliers": 27,
+      "train_inlier_fraction": 0.574468085106383,
+      "held_out_matches": 16,
+      "held_out_median_error_px": 2.0244112592356,
+      "held_out_fraction_within_threshold": 0.6875,
+      "scale": 1.003551055843988,
+      "rotation_deg": -0.2496244237487282
+    },
+    {
+      "pair_1based": [
+        2,
+        3
+      ],
+      "accepted": true,
+      "reciprocal_matches": 166,
+      "train_inliers": 108,
+      "train_inlier_fraction": 0.8709677419354839,
+      "held_out_matches": 42,
+      "held_out_median_error_px": 0.5188455792542368,
+      "held_out_fraction_within_threshold": 0.9761904761904762,
+      "scale": 1.0016834332487214,
+      "rotation_deg": -0.019351040215363477
+    },
+    {
+      "pair_1based": [
+        2,
+        4
+      ],
+      "accepted": true,
+      "reciprocal_matches": 129,
+      "train_inliers": 57,
+      "train_inlier_fraction": 0.59375,
+      "held_out_matches": 33,
+      "held_out_median_error_px": 0.8875741644112074,
+      "held_out_fraction_within_threshold": 0.9393939393939394,
+      "scale": 1.0006043318053734,
+      "rotation_deg": -0.13228215881480349
+    },
+    {
+      "pair_1based": [
+        2,
+        5
+      ],
+      "accepted": false,
+      "reciprocal_matches": 72,
+      "train_inliers": 26,
+      "train_inlier_fraction": 0.48148148148148145,
+      "held_out_matches": 18,
+      "held_out_median_error_px": 0.9326831540935028,
+      "held_out_fraction_within_threshold": 0.8888888888888888,
+      "scale": 1.002600536734786,
+      "rotation_deg": -0.1703244850377778,
+      "reason": "target motion failed validation"
+    },
+    {
+      "pair_1based": [
+        3,
+        4
+      ],
+      "accepted": true,
+      "reciprocal_matches": 182,
+      "train_inliers": 128,
+      "train_inlier_fraction": 0.9411764705882353,
+      "held_out_matches": 46,
+      "held_out_median_error_px": 0.5803511789132069,
+      "held_out_fraction_within_threshold": 0.9782608695652174,
+      "scale": 1.0011725096500361,
+      "rotation_deg": -0.030875562069208322
+    },
+    {
+      "pair_1based": [
+        3,
+        5
+      ],
+      "accepted": true,
+      "reciprocal_matches": 115,
+      "train_inliers": 64,
+      "train_inlier_fraction": 0.7441860465116279,
+      "held_out_matches": 29,
+      "held_out_median_error_px": 0.9926414787687907,
+      "held_out_fraction_within_threshold": 0.9310344827586207,
+      "scale": 1.0034530430736568,
+      "rotation_deg": -0.08113607260512301
+    },
+    {
+      "pair_1based": [
+        4,
+        5
+      ],
+      "accepted": true,
+      "reciprocal_matches": 175,
+      "train_inliers": 112,
+      "train_inlier_fraction": 0.8549618320610687,
+      "held_out_matches": 44,
+      "held_out_median_error_px": 0.6630542288760922,
+      "held_out_fraction_within_threshold": 1.0,
+      "scale": 1.002226065935774,
+      "rotation_deg": 0.0010851268980174382
+    }
+  ],
+  "source_to_reference_matrices": [
+    [
+      [
+        1.001640216536733,
+        0.0012425928559653965,
+        76.79363987900638
+      ],
+      [
+        -0.0012425928559653965,
+        1.001640216536733,
+        -3.039549254894837
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        1.0008688964160894,
+        0.0009514191804671484,
+        41.64224400977196
+      ],
+      [
+        -0.0009514191804671484,
+        1.0008688964160894,
+        0.30853460281514344
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.9993200849851575,
+        -0.0011968447431777174,
+        -37.445815227175444
+      ],
+      [
+        0.0011968447431777174,
+        0.9993200849851575,
+        -1.1238450701848706
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    [
+      [
+        0.9972105695860115,
+        -0.0017475997014413775,
+        -70.30108741047457
+      ],
+      [
+        0.0017475997014413775,
+        0.9972105695860115,
+        0.10654537087998506
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  ],
+  "limitations": [
+    "Fruit masks, colour thresholds and the ROI are scene-specific priors and need review.",
+    "The 2D target model approximates a range of grape depths; alignment can still be imperfect.",
+    "Neighbouring-view graph consistency does not establish true camera calibration or metric depth.",
+    "A surface must have sufficient clear observations; unseen surfaces and backs of berries remain unknown.",
+    "No model was trained for grape identity, ripeness, health, or berry counting."
+  ],
+  "closeup_bounds_canvas_px": [
+    946,
+    1175,
+    1803,
+    1824
+  ],
+  "supported_target_pixels": 25841,
+  "reliable_target_pixels": 25765,
+  "canvas_origin_reference_processing_px": [
+    0,
+    0
+  ],
+  "note": "Target pixels are fruit candidates supported by multiple aligned views, not verified grape instances or berry counts."
+}
