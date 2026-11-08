@@ -32,6 +32,8 @@ def main():
     ap.add_argument("--input", required=True, help="input image folder")
     ap.add_argument("--output", required=True, help="output folder (gets masks/ and removal_masks/)")
     ap.add_argument("--overlay", action="store_true", help="also save overlay/ (blue = removed, red = grape)")
+    ap.add_argument("--grape-masks", action="store_true",
+                    help="also save grape_masks/<stem>.png (white = grape), the --target-masks input of the restoration")
     args = ap.parse_args()
 
     out = Path(args.output)
@@ -39,6 +41,8 @@ def main():
     (out / "removal_masks").mkdir(exist_ok=True)
     if args.overlay:
         (out / "overlay").mkdir(exist_ok=True)
+    if args.grape_masks:
+        (out / "grape_masks").mkdir(exist_ok=True)
     processor = Sam3Processor(build_sam3_image_model())
     erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25))
@@ -54,6 +58,8 @@ def main():
         removal = (cv2.dilate(foliage, dilate) > 0) & ~grape  # depth maps: 255 = drop
         cv2.imwrite(str(out / "masks" / (p.name + ".png")), (~colmap).astype(np.uint8) * 255)
         cv2.imwrite(str(out / "removal_masks" / f"{p.stem}_mask.png"), removal.astype(np.uint8) * 255)
+        if args.grape_masks:
+            cv2.imwrite(str(out / "grape_masks" / f"{p.stem}.png"), grape.astype(np.uint8) * 255)
         if args.overlay:
             im = cv2.imread(str(p))
             im[removal] = (0.5 * im[removal] + 0.5 * np.array([255, 128, 0])).astype(np.uint8)  # blue
