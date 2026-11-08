@@ -8,7 +8,7 @@ report discusses them (Secs. 3.5 and 5.2) and because they show the design proce
 | --- | --- | --- |
 | [Cherry_SAI](Cherry_SAI) | October prototype on the toy-cherry scene: shift-and-add synthetic aperture at a nominal fruit depth with HSV leaf masks, a two-branch colour detector and a multi-view vote. The "depth shift" baseline of Table 2 descends from this. | Superseded |
 | [COLMAP](COLMAP) | SAM 3 foliage masks, a COLMAP sparse and dense reconstruction with the foliage masked out, and a middle view whose foliage pixels are filled from the other views' depth maps (`reconstruct_background.py`); `reconstruct_img.py` renders and shows a thresholded fused point cloud. | Explored, not the reported method |
-| [../../../has_sai](../../../has_sai) | A colour-free, occlusion-aware synthetic aperture: per-view foliage masks from multi-view depth, a visibility-weighted all-in-focus render and a shape-based detector, with a 44-scene ray-cast benchmark. Benchmarked in simulation only; never run on the captures. | Explored, not the reported method |
+| [../../../has_sai](../../../has_sai) | A colour-free, occlusion-aware synthetic aperture: per-view foliage masks from multi-view depth, a visibility-weighted all-in-focus render and a shape-based detector, with a 44-scene ray-cast benchmark. Benchmarked in simulation; run once on the five-branch capture ([has_sai/results/real](../../../has_sai/results/real)), where the leaf-free render worked and the count did not. | Explored, not the reported method |
 
 ## COLMAP background fill
 

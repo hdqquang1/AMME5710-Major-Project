@@ -15,4 +15,7 @@ Out/**/*.npz
 Out/**/*.npy
 !Out/**/README.md
 has_sai/data/
-has_sai/results/real/
+has_sai/results/real/*
+!has_sai/results/real/README.md
+!has_sai/results/real/five_branches_montage.jpg
+!has_sai/results/real/five_branches_summary.json

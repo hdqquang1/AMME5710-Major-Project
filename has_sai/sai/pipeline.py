@@ -76,10 +76,10 @@ def deocclude(rig, cfg=None, verbose=True):
                                      n_neighbours=c["mask_neighbours"], win=c["mask_win"],
                                      keep=c["mask_keep"], step_px=c["mask_step_px"],
                                      z_split=c["z_split"], dilate_px=c["mask_dilate_px"],
-                                     verbose=verbose, wall_front=c["wall_front"])
+                                     verbose=verbose, wall_front=c["wall_front"], roi=c.get("roi"))
     T["masks"] = time.time() - t0
     z_split = fm["z_split"]
-    lo, hi, z_wall = background_range(fm["depths"][rig.ref], z_split, c["wall_front"], c["wall_back"])
+    lo, hi, z_wall = background_range(fm["roi_depths"], z_split, c["wall_front"], c["wall_back"])
     f = rig.views[rig.ref].K[0, 0]
     planes = planesweep.inverse_depth_planes(lo, hi, c["bg_step_px"], f, rig.baselines().max())
     if verbose:

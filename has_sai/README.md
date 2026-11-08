@@ -64,8 +64,9 @@ Photos and generated scenes live in `data/` folders, which git ignores.
 
 ## Results so far (simulation only)
 
-No real photos have been processed yet: the first capture is not in the repo
-(`data/` is git-ignored).  Everything below is from the synthetic benchmark:
+The numbers below are from the synthetic benchmark.  One real capture has since been
+processed, qualitatively only: see [results/real/README.md](results/real/README.md) (the
+leaf-free render works, the count does not without real-photo calibration).  Benchmark:
 44 ray-cast scenes, test seeds 2 and 3 never looked at during development,
 detector frozen at tag `has-sai-freeze-1` before they were read.  Full tables:
 `results/synthetic/summary.md`, `factorial.md`, `realpath_study.csv`.

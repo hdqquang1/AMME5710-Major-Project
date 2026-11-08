@@ -170,7 +170,7 @@ def scaled_views(views, s):
 
 def foreground_masks(rig, z_near, z_far, mask_scale=0.5, n_neighbours=6, win=5, keep=0.5,
                      step_px=2.0, z_split=None, dilate_px=2, verbose=False, max_offset=3,
-                     n_threads=4, wall_front=None):
+                     n_threads=4, wall_front=None, roi=None):
     """
     Colour-free occluder (foliage) masks for every view.
 
@@ -185,8 +185,10 @@ def foreground_masks(rig, z_near, z_far, mask_scale=0.5, n_neighbours=6, win=5, 
     4. Foreground = depth nearer than the split; a 3x3 opening removes speckle,
        then the mask is upsampled and dilated by `dilate_px` so defocused or
        fuzzy pipe-cleaner rims are also excluded.
+    `roi` (x0, y0, x1, y1 in processing pixels) restricts the split and wall
+    estimate to the scene of interest when the frame also shows a far room.
     Returns dict(masks=[float32 HxW in {0,1}], depths=[low-res depth maps],
-                 z_split, planes).
+                 z_split, planes, roi_depths=the reference depth crop used).
     """
     small = scaled_views(rig.views, mask_scale)
     f = small[rig.ref].K[0, 0]
@@ -204,9 +206,13 @@ def foreground_masks(rig, z_near, z_far, mask_scale=0.5, n_neighbours=6, win=5, 
     # reference first (it fixes the split depth), then the other views in parallel threads
     out_depths[rig.ref], planes = sweep_one(rig.ref)
     if z_split is None:
-        z_split = otsu_split_depth(out_depths[rig.ref])
+        d_ref = out_depths[rig.ref]
+        if roi is not None:
+            # restrict the split (and the wall estimate) to the scene of interest, e.g. the box
+            x0, y0, x1, y1 = [int(round(v * mask_scale)) for v in roi]
+            d_ref = d_ref[y0:y1, x0:x1]
+        z_split = otsu_split_depth(d_ref)
         if wall_front is not None:
-            d_ref = out_depths[rig.ref]
             far = d_ref[d_ref > z_split]
             z_wall = float(np.median(far)) if far.size else float(np.median(d_ref))
             z_split = min(z_split, z_wall - wall_front - 0.01)
@@ -227,7 +233,8 @@ def foreground_masks(rig, z_near, z_far, mask_scale=0.5, n_neighbours=6, win=5, 
         if dilate_px > 0:
             m = cv2.dilate(m, kd)
         masks.append(m.astype(np.float32))
-    return dict(masks=masks, depths=out_depths, z_split=z_split, planes=planes)
+    return dict(masks=masks, depths=out_depths, z_split=z_split, planes=planes,
+                roi_depths=d_ref if roi is not None else out_depths[rig.ref])
 
 
 def inverse_depth_planes(z_near, z_far, step_px, f_px, baseline):

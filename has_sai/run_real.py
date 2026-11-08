@@ -153,7 +153,8 @@ def process(name, image_dir, search_root, args, out_root):
     if args.exposure_norm:
         gains = camera.normalise_exposure(rig, args.gain_depth)
         info["exposure_gain_range"] = [float(np.min(gains)), float(np.max(gains))]
-    cfg = dict(z_near=args.z_near, z_far=args.z_far, wall_front=args.wall_front)
+    cfg = dict(z_near=args.z_near, z_far=args.z_far, wall_front=args.wall_front,
+               roi=[int(v) for v in args.roi] if args.roi else None)
     if args.z_split:
         cfg["z_split"] = args.z_split
     res = pipeline.deocclude(rig, cfg)
