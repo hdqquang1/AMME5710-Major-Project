@@ -245,6 +245,11 @@ def crop_to(img, box):
 
 
 R = Path("results/report")
+if not all((R / f"b{b}_{mm}mm" / "grapes_rgb.png").is_file() for b in BL for mm in (20, 40, 60)):
+    # The run images are git-ignored; every table and plot above has been regenerated.
+    print("qualitative grid skipped: the run images in results/report/ are not present")
+    print("assets written to", OUT)
+    raise SystemExit(0)
 tiles = []
 for b in BL:
     m = cv2.imread(str(R / f"b{b}_20mm" / "reference_fruit_mask.png"), 0) > 127
