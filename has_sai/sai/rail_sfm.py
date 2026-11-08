@@ -263,7 +263,7 @@ def refine_rotations(K, tracks, feats, n, ref, spacing, X, Rs, ts, n_outer=4):
 
 
 def estimate_rail_poses(gray_images, K, spacing, ref=None, max_pair_gap=None, n_iter=5, verbose=True,
-                        model="auto"):
+                        model="auto", n_features=0):
     """
     Poses (R_i, t_i, world = reference camera frame) of a rail capture.
 
@@ -274,12 +274,15 @@ def estimate_rail_poses(gray_images, K, spacing, ref=None, max_pair_gap=None, n_
              rotation-translation ambiguity of a short lateral baseline),
              "auto" (default: also fit per-photo rotations by alternating PnP with
              the global known-rotation solve, and keep them only if they cut the
-             reprojection RMSE by more than 20 %) or "full" (sequential PnP only).
+             reprojection RMSE by more than 20 %) or "full" (sequential PnP only);
+             max_pair_gap limits matching to photos at most that many rail steps
+             apart (None = every pair; 28 photos make 378 pairs, which is slow);
+             n_features caps SIFT features per photo (0 = no cap).
     Output:  dict(R=[...], t=[...], points (M x 3), diagnostics).
     """
     n = len(gray_images)
     ref = n // 2 if ref is None else ref
-    feats = detect_features(gray_images)
+    feats = detect_features(gray_images, n_features)
     pairs = {}
     for i in range(n):
         for j in range(i + 1, n):

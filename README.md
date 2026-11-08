@@ -84,7 +84,7 @@ page is the build and run guide.
 
 | Part | Use |
 | --- | --- |
-| Smartphone (iPhone, main camera, 4032 x 3024) | Takes every photo; focus, exposure and white balance locked. |
+| Smartphone (iPhone, main camera, held in portrait: 3024 x 4032) | Takes every photo; focus, exposure and white balance locked. |
 | Horizontal rail with a phone holder | Stands in for the vehicle. The carriage stops every 20 mm. |
 | Cardboard enclosure with a viewing slot | Holds the scene and blocks stray light. |
 | Red grapes on branches | The fruit layer, about 1.1 m from the camera. |

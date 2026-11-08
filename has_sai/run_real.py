@@ -63,7 +63,7 @@ def find_captures():
     return found
 
 
-def build_rig(image_dir, search_root, scale, spacing, fx_full, ref, poses):
+def build_rig(image_dir, search_root, scale, spacing, fx_full, ref, poses, args=None):
     """Rig with poses from COLMAP (if available) or the OpenCV rail SfM."""
     info = {}
     model = None
@@ -101,7 +101,8 @@ def build_rig(image_dir, search_root, scale, spacing, fx_full, ref, poses):
         sfm_scale = min(1.0, 2000.0 / max(W, H))   # SIFT on ~2000 px wide photos
         grays = [cv2.resize(cv2.imread(p, cv2.IMREAD_GRAYSCALE), None, fx=sfm_scale, fy=sfm_scale,
                             interpolation=cv2.INTER_AREA) for p in paths]
-        r = rail_sfm.estimate_rail_poses(grays, camera.scale_K(K, sfm_scale), spacing, ref=ref)
+        r = rail_sfm.estimate_rail_poses(grays, camera.scale_K(K, sfm_scale), spacing, ref=ref,
+                                         max_pair_gap=args.sfm_gap, n_features=args.sfm_features)
         for v, R, t in zip(views, r["R"], r["t"]):
             v.R, v.t = R, t
         info["poses"] = "OpenCV rail SfM (translation-only)"
@@ -147,7 +148,7 @@ def process(name, image_dir, search_root, args, out_root):
     os.makedirs(out, exist_ok=True)
     t0 = time.time()
     rig, info = build_rig(image_dir, search_root, args.scale, args.spacing, args.fx_full,
-                          args.ref, args.poses)
+                          args.ref, args.poses, args)
     print(f"[{name}] {len(rig.views)} photos, poses: {info['poses']}")
     if args.exposure_norm:
         gains = camera.normalise_exposure(rig, args.gain_depth)
@@ -281,6 +282,8 @@ def main():
     ap.add_argument("--ref", type=int, default=None, help="index of the reference photo (default: centre)")
     ap.add_argument("--fx-full", type=float, default=None, help="focal length in full-resolution pixels")
     ap.add_argument("--poses", choices=["auto", "colmap", "sfm", "nominal"], default="auto")
+    ap.add_argument("--sfm-gap", type=int, default=6, help="match photos at most this many rail steps apart")
+    ap.add_argument("--sfm-features", type=int, default=8000, help="SIFT features kept per photo in the rail SfM")
     ap.add_argument("--fruit", default="cherry", choices=list(detect.FRUIT_RADII))
     ap.add_argument("--threshold", type=float, default=None, help="detection score threshold [mm]")
     ap.add_argument("--radius-mm", type=float, nargs=2, default=None, metavar=("RMIN", "RMAX"),
